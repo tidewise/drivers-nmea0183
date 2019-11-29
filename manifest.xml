@@ -12,5 +12,6 @@
   <depend package="base/types" />
   <depend package="drivers/marnav" />
   <depend package="drivers/iodrivers_base" />
+  <depend package="drivers/ais_base" />
   <test_depend package="google-test" />
 </package>
