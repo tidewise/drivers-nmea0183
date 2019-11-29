@@ -52,3 +52,18 @@ TEST_F(DriverTest, it_skips_garbage) {
     ASSERT_TRUE(sentence);
     ASSERT_EQ("APB", sentence->tag());
 }
+
+TEST_F(DriverTest, it_skips_a_message_start_if_the_message_is_bigger_than_NMEA_max_sentence_length) {
+    // Need to feed more bytes than the driver's internal buffer. Without the
+    // sentence length protection, iodrivers_Base will complain
+    string msg = "$GPAPB,A,A,0,M,11.0,M*12somestuff$eoijroeirjabcdea"
+                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdea"
+                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdea"
+                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdea"
+                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabcdea"
+                 "$GPAPB,A,A,0.10,R,N,V,V,11.0,M,DEST,11.0,M,11.0,M*12\r\n";
+    pushStringToDriver(msg);
+    auto sentence = driver.readSentence();
+    ASSERT_TRUE(sentence);
+    ASSERT_EQ("APB", sentence->tag());
+}

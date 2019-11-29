@@ -11,7 +11,7 @@ namespace nmea0183 {
      */
     class Driver : public iodrivers_base::Driver {
         static const int MAX_SENTENCE_LENGTH = marnav::nmea::sentence::max_length;
-        static const int BUFFER_SIZE = MAX_SENTENCE_LENGTH;
+        static const int BUFFER_SIZE = MAX_SENTENCE_LENGTH * 2;
 
     protected:
         int extractPacket(uint8_t const* buffer, size_t buffer_size) const;

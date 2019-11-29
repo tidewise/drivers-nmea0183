@@ -29,9 +29,6 @@ int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const {
     else if (buffer_size < 2) {
         return 0;
     }
-    else if (buffer_size > MAX_SENTENCE_LENGTH) {
-        return -1; // Just eat the '$' and let iodriver_base call us back
-    }
 
     for (size_t i = 1; i < buffer_size; ++i) {
         if (buffer[i - 1] == '\r' && buffer[i] == '\n') {
@@ -52,6 +49,11 @@ int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const {
         }
     }
 
+    if (buffer_size > MAX_SENTENCE_LENGTH) {
+        // We should have a full sentence, just eat the '$' and let
+        // iodriver_base call us back
+        return -1;
+    }
     return 0;
 }
 
