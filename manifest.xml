@@ -1,19 +1,17 @@
 <package>
   <description brief="Device driver to parse a NMEA0183 stream">
-  
+    This library does NOT implement the protocol parsing itself.
+    We're using 'marnav' for this. It is instead only proposing
+    a iodrivers_base-based class to read NMEA streams in general,
+    and/or an AIS stream in particular (since AIS streams are
+    a bit strange)
   </description>
   <author>Sylvain Joyeux/sylvain.joyeux@tidewise.io</author>
-  <license></license>
-  <url>http://</url>
-  <logo>http://</logo>
+  <license>LGPLv2+</license>
   <depend package="base/cmake" />
-  <!--
-   To add any dependencies use the depend tag
-  <depend package="dummy-dependency-0" />
-	...
-  <depend package="dummy-dependency-n-1" />
-  <depend package="dummy-dependency-n" />
-  -->
   <depend package="base/types" />
   <depend package="drivers/marnav" />
+  <depend package="drivers/iodrivers_base" />
+  <depend package="drivers/ais_base" />
+  <test_depend package="google-test" />
 </package>

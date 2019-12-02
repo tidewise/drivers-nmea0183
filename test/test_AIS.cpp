@@ -1,0 +1,146 @@
+#include <gtest/gtest.h>
+#include <iodrivers_base/FixtureGTest.hpp>
+#include <marnav/ais/message_01.hpp>
+#include <nmea0183/AIS.hpp>
+
+using namespace marnav;
+using namespace nmea0183;
+
+struct AISTest : public ::testing::Test,
+                 public iodrivers_base::Fixture<Driver> {
+
+    AIS ais;
+
+    AISTest()
+        : ais(driver) {
+    }
+
+    void pushCharToDriver(uint8_t c) {
+        pushDataToDriver(&c, &c + 1);
+    }
+
+    void pushStringToDriver(std::string const& msg) {
+        uint8_t const* msg_u8 = reinterpret_cast<uint8_t const*>(msg.c_str());
+        pushDataToDriver(msg_u8, msg_u8 + msg.size());
+    }
+};
+
+const std::vector<std::string> ais_strings = {
+    "!AIVDM,2,1,3,B,55P5TL01VIaAL@7WKO@mBplU@<PDhh000000001S;AJ::4A80?4i@E53,0*3E\r\n",
+    "!AIVDM,2,2,3,B,1@0000000000000,2*55\r\n"
+};
+
+TEST_F(AISTest, it_reassembles_AIS_messages) {
+    pushStringToDriver(ais_strings[0]);
+    pushStringToDriver(ais_strings[1]);
+
+    auto msg = ais.readMessage();
+    ASSERT_EQ(marnav::ais::message_id::static_and_voyage_related_data, msg->type());
+}
+
+TEST_F(AISTest, it_skips_sentences_that_do_not_follow_each_other) {
+    pushStringToDriver(ais_strings[0]);
+    pushStringToDriver(ais_strings[0]);
+    pushStringToDriver(ais_strings[1]);
+
+    auto msg = ais.readMessage();
+    ASSERT_EQ(marnav::ais::message_id::static_and_voyage_related_data, msg->type());
+}
+
+TEST_F(AISTest, it_drops_a_sentence_that_do_not_start_a_multisentence_message) {
+    pushStringToDriver(ais_strings[1]);
+    pushStringToDriver(ais_strings[0]);
+    pushStringToDriver(ais_strings[1]);
+
+    auto msg = ais.readMessage();
+    ASSERT_EQ(marnav::ais::message_id::static_and_voyage_related_data, msg->type());
+}
+
+TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
+    ais::message_01 msg;
+    msg.set_mmsi(utils::mmsi(1234567));
+    msg.set_nav_status(ais::navigation_status::at_anchor);
+    msg.set_rot(ais::rate_of_turn(10.0));
+    msg.set_sog(10);
+    msg.set_position_accuracy(true);
+    msg.set_cog(15);
+    msg.set_hdg(25);
+    msg.set_timestamp(22);
+    msg.set_maneuver_indicator(ais::maneuver_indicator_id::normal);
+    msg.set_raim(true);
+    msg.set_radio_status(1234);
+
+    auto position = AIS::getPosition(msg);
+    ASSERT_EQ(1234567, position.mmsi);
+    ASSERT_EQ(0, position.imo);
+    ASSERT_EQ(ais_base::STATUS_AT_ANCHOR, position.status);
+    ASSERT_TRUE(base::isUnknown(position.yaw_velocity)); // not converted
+    ASSERT_FLOAT_EQ(10, position.speed_over_ground);
+    ASSERT_TRUE(position.high_accuracy_position);
+    ASSERT_FLOAT_EQ(15, position.course_over_ground.getDeg());
+    ASSERT_FLOAT_EQ(25, position.yaw.getDeg());
+    ASSERT_EQ(ais_base::MANEUVER_NORMAL, position.maneuver_indicator);
+    ASSERT_TRUE(position.raim);
+    ASSERT_EQ(1234, position.radio_status);
+}
+
+TEST_F(AISTest, it_leaves_absent_optional_fields_as_NaN_in_Position) {
+    ais::message_01 msg;
+    auto position = AIS::getPosition(msg);
+
+    ASSERT_TRUE(base::isUnknown(position.course_over_ground));
+    ASSERT_TRUE(base::isUnknown(position.latitude));
+    ASSERT_TRUE(base::isUnknown(position.longitude));
+    ASSERT_TRUE(base::isUnknown(position.yaw));
+    ASSERT_TRUE(base::isUnknown(position.yaw_velocity)); // not converted
+    ASSERT_TRUE(base::isUnknown(position.speed_over_ground));
+}
+
+TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
+    ais::message_05 msg;
+    msg.set_mmsi(utils::mmsi(123456));
+    msg.set_imo_number(7890);
+    msg.set_callsign("CALL");
+    msg.set_shipname("NAME");
+    msg.set_shiptype(ais::ship_type::cargo);
+    msg.set_to_bow(5);
+    msg.set_to_stern(10);
+    msg.set_to_port(2);
+    msg.set_to_starboard(4);
+    msg.set_epfd_fix(ais::epfd_fix_type::combined_gps_glonass);
+    msg.set_draught(7);
+    msg.set_destination("DEST");
+
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ(123456, info.mmsi);
+    ASSERT_EQ(7890, info.imo);
+    ASSERT_EQ("CALL", info.call_sign);
+    ASSERT_EQ("NAME", info.name);
+    ASSERT_EQ(ais_base::SHIP_TYPE_CARGO, info.ship_type);
+    ASSERT_EQ(15, info.length);
+    ASSERT_EQ(6, info.width);
+    ASSERT_EQ(base::Vector3d(10, 4, 0), info.reference_position);
+    ASSERT_EQ(ais_base::EPFD_COMBINED_GPS_GLONASS, info.epfd_fix);
+    ASSERT_EQ(7, info.draft);
+}
+
+TEST_F(AISTest, it_converts_marnav_message05_into_a_VoyageInformation) {
+    ais::message_05 msg;
+    msg.set_mmsi(utils::mmsi(123456));
+    msg.set_imo_number(7890);
+    msg.set_callsign("CALL");
+    msg.set_shipname("NAME");
+    msg.set_shiptype(ais::ship_type::cargo);
+    msg.set_to_bow(5);
+    msg.set_to_stern(10);
+    msg.set_to_port(2);
+    msg.set_to_starboard(4);
+    msg.set_epfd_fix(ais::epfd_fix_type::combined_gps_glonass);
+    msg.set_draught(7);
+    msg.set_destination("DEST");
+
+    auto info = AIS::getVoyageInformation(msg);
+    ASSERT_EQ(123456, info.mmsi);
+    ASSERT_EQ(7890, info.imo);
+    ASSERT_EQ("DEST", info.destination);
+}
