@@ -70,6 +70,7 @@ ais_base::Position AIS::getPosition(ais::message_01 const& message) {
     );
     position.raim = message.get_raim();
     position.radio_status = message.get_radio_status();
+    position.ensureEnumsValid();
     return position;
 }
 
@@ -90,6 +91,8 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.reference_position = Eigen::Vector3d(
         message.get_to_stern(), message.get_to_starboard(), 0
     );
+
+    info.ensureEnumsValid();
     return info;
 }
 
