@@ -6,9 +6,8 @@ list(GET marnav_IMPORTED_CONFIGURATIONS 0 marnav_CONFIGURATION)
 get_target_property(marnav_LIBRARY marnav::marnav IMPORTED_LOCATION_${marnav_CONFIGURATION})
 
 foreach(marnav_INC ${marnav_INCLUDE_DIRECTORIES})
-    list(APPEND marnav_CFLAGS "-I${marnav_INC}")
+    set(marnav_CFLAGS "${marnav_CFLAGS} -I${marnav_INC}")
 endforeach()
-string(JOIN " " marnav_CFLAGS ${marnav_CFLAGS})
 
 rock_library(nmea0183
     SOURCES Driver.cpp AIS.cpp
