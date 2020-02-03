@@ -84,6 +84,38 @@ TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
     ASSERT_EQ(1234, position.radio_status);
 }
 
+TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_lower_than_STATUS_MIN) {
+    ais::message_01 msg;
+    msg.set_nav_status(static_cast<ais::navigation_status>(ais_base::STATUS_MIN - 1));
+    auto position = AIS::getPosition(msg);
+    ASSERT_EQ(ais_base::STATUS_NOT_DEFINED, position.status);
+}
+
+TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_higher_than_STATUS_MAX) {
+    ais::message_01 msg;
+    msg.set_nav_status(static_cast<ais::navigation_status>(ais_base::STATUS_MAX + 1));
+    auto position = AIS::getPosition(msg);
+    ASSERT_EQ(ais_base::STATUS_NOT_DEFINED, position.status);
+}
+
+TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_lower_than_MANEUVER_MIN) {
+    ais::message_01 msg;
+    msg.set_maneuver_indicator(
+        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MIN - 1)
+    );
+    auto position = AIS::getPosition(msg);
+    ASSERT_EQ(ais_base::MANEUVER_NOT_AVAILABLE, position.maneuver_indicator);
+}
+
+TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_higher_than_MANEUVER_MAX) {
+    ais::message_01 msg;
+    msg.set_maneuver_indicator(
+        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MAX + 1)
+    );
+    auto position = AIS::getPosition(msg);
+    ASSERT_EQ(ais_base::MANEUVER_NOT_AVAILABLE, position.maneuver_indicator);
+}
+
 TEST_F(AISTest, it_leaves_absent_optional_fields_as_NaN_in_Position) {
     ais::message_01 msg;
     auto position = AIS::getPosition(msg);
@@ -122,6 +154,34 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
     ASSERT_EQ(base::Vector3d(10, 4, 0), info.reference_position);
     ASSERT_EQ(ais_base::EPFD_COMBINED_GPS_GLONASS, info.epfd_fix);
     ASSERT_EQ(7, info.draft);
+}
+
+TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_lower_than_MIN) {
+    ais::message_05 msg;
+    msg.set_shiptype(static_cast<ais::ship_type>(ais_base::SHIP_TYPE_MIN - 1));
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ(ais_base::SHIP_TYPE_NOT_AVAILABLE, info.ship_type);
+}
+
+TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_higher_than_MAX) {
+    ais::message_05 msg;
+    msg.set_shiptype(static_cast<ais::ship_type>(ais_base::SHIP_TYPE_MAX + 1));
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ(ais_base::SHIP_TYPE_NOT_AVAILABLE, info.ship_type);
+}
+
+TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_lower_than_MIN) {
+    ais::message_05 msg;
+    msg.set_epfd_fix(static_cast<ais::epfd_fix_type>(ais_base::EPFD_MIN - 1));
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ(ais_base::EPFD_UNDEFINED, info.epfd_fix);
+}
+
+TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_higher_than_MAX) {
+    ais::message_05 msg;
+    msg.set_epfd_fix(static_cast<ais::epfd_fix_type>(ais_base::EPFD_MAX + 1));
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ(ais_base::EPFD_UNDEFINED, info.epfd_fix);
 }
 
 TEST_F(AISTest, it_converts_marnav_message05_into_a_VoyageInformation) {
