@@ -1,4 +1,5 @@
 #include <nmea0183/AIS.hpp>
+#include <nmea0183/Exceptions.hpp>
 #include <marnav/nmea/vdm.hpp>
 #include <marnav/ais/ais.hpp>
 
@@ -7,38 +8,57 @@ using namespace marnav;
 using namespace nmea0183;
 
 AIS::AIS(Driver& driver)
-    : m_driver(driver) {
+    : mDriver(driver) {
 }
 
 unique_ptr<ais::message> AIS::readMessage() {
-    vector<pair<string, uint32_t>> payloads;
-
     while (true) {
-        auto sentence = m_driver.readSentence();
-        if (sentence->id() != nmea::sentence_id::VDM) {
-            continue;
+        auto sentence = mDriver.readSentence();
+        auto msg = processSentence(*sentence);
+        if (msg) {
+            return msg;
         }
+    }
+}
 
-        auto vdm = nmea::sentence_cast<nmea::vdm>(sentence);
+uint32_t AIS::getDiscardedSentenceCount() const {
+    return mDiscardedSentenceCount;
+}
 
-        size_t n_fragments = vdm->get_n_fragments();
-        size_t fragment = vdm->get_fragment();
-        if (fragment != payloads.size() + 1) {
-            payloads.clear();
-            if (fragment != 1) {
-                continue;
-            }
+unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence) {
+    if (sentence.id() != nmea::sentence_id::VDM) {
+        return unique_ptr<ais::message>();
+    }
+
+    auto vdm = nmea::sentence_cast<nmea::vdm>(&sentence);
+
+    size_t n_fragments = vdm->get_n_fragments();
+    size_t fragment = vdm->get_fragment();
+    if (fragment != payloads.size() + 1) {
+        mDiscardedSentenceCount += payloads.size();
+        payloads.clear();
+
+        // Go on if we're receiving the first fragment of a new message
+        if (fragment != 1) {
+            mDiscardedSentenceCount++;
+            return unique_ptr<ais::message>();
         }
+    }
 
-        payloads.push_back(make_pair(
-            vdm->get_payload(), vdm->get_n_fill_bits()
-        ));
+    payloads.push_back(make_pair(
+        vdm->get_payload(), vdm->get_n_fill_bits()
+    ));
 
-        if (payloads.size() == n_fragments) {
-            auto message = ais::make_message(payloads);
-            payloads.clear();
-            return message;
-        }
+    if (payloads.size() != n_fragments) {
+        return unique_ptr<ais::message>();
+    }
+
+    try {
+        auto payloads = std::move(this->payloads);
+        return ais::make_message(payloads);
+    }
+    catch (std::exception const& e) {
+        throw MarnavParsingError(e.what());
     }
 }
 

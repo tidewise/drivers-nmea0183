@@ -60,8 +60,13 @@ int Driver::extractPacket(uint8_t const* buffer, size_t buffer_size) const {
 std::unique_ptr<marnav::nmea::sentence> Driver::readSentence() {
     uint8_t buffer[BUFFER_SIZE];
     int sentence_size = readPacket(buffer, BUFFER_SIZE);
-    return marnav::nmea::make_sentence(
-        std::string(reinterpret_cast<char*>(buffer),
-                    reinterpret_cast<char*>(buffer + sentence_size - 2))
-    );
+    try {
+        return marnav::nmea::make_sentence(
+            std::string(reinterpret_cast<char*>(buffer),
+                        reinterpret_cast<char*>(buffer + sentence_size - 2))
+        );
+    }
+    catch (std::exception const& e) {
+        throw MarnavParsingError(e.what());
+    }
 }
