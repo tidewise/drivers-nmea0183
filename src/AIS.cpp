@@ -103,7 +103,7 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.call_sign = message.get_callsign();
     info.length = message.get_to_bow() + message.get_to_stern();
     info.width = message.get_to_port() + message.get_to_starboard();
-    info.draft = message.get_draught();
+    info.draft = static_cast<float>(message.get_draught()) / 10;
     info.ship_type = static_cast<ais_base::ShipType>(
         message.get_shiptype()
     );

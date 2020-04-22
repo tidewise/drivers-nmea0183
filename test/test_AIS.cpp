@@ -173,7 +173,7 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
     ASSERT_EQ(6, info.width);
     ASSERT_EQ(base::Vector3d(10, 4, 0), info.reference_position);
     ASSERT_EQ(ais_base::EPFD_COMBINED_GPS_GLONASS, info.epfd_fix);
-    ASSERT_EQ(7, info.draft);
+    ASSERT_NEAR(0.7, info.draft, 1e-2);
 }
 
 TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_lower_than_MIN) {
