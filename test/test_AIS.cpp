@@ -176,6 +176,20 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
     ASSERT_NEAR(0.7, info.draft, 1e-2);
 }
 
+TEST_F(AISTest, it_removes_trailing_spaces_in_the_name) {
+    ais::message_05 msg;
+    msg.set_shipname("NAME with SPACES   ");
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ("NAME with SPACES", info.name);
+}
+
+TEST_F(AISTest, it_removes_trailing_spaces_in_the_callsign) {
+    ais::message_05 msg;
+    msg.set_callsign("CALL    ");
+    auto info = AIS::getVesselInformation(msg);
+    ASSERT_EQ("CALL", info.call_sign);
+}
+
 TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_lower_than_MIN) {
     ais::message_05 msg;
     msg.set_shiptype(static_cast<ais::ship_type>(ais_base::SHIP_TYPE_MIN - 1));

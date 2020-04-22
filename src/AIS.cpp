@@ -99,8 +99,12 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.time = base::Time::now();
     info.mmsi = message.get_mmsi();
     info.imo = message.get_imo_number();
-    info.name = message.get_shipname();
-    info.call_sign = message.get_callsign();
+    string name = message.get_shipname();
+    int first_not_space = name.find_last_not_of(" ");
+    info.name = name.substr(0, first_not_space + 1);
+    string call_sign = message.get_callsign();
+    first_not_space = call_sign.find_last_not_of(" ");
+    info.call_sign = call_sign.substr(0, first_not_space + 1);
     info.length = message.get_to_bow() + message.get_to_stern();
     info.width = message.get_to_port() + message.get_to_starboard();
     info.draft = static_cast<float>(message.get_draught()) / 10;
