@@ -11,7 +11,7 @@ endforeach()
 
 rock_library(nmea0183
     SOURCES Driver.cpp AIS.cpp
-    HEADERS Driver.hpp AIS.hpp
+    HEADERS Driver.hpp AIS.hpp Exceptions.hpp
     DEPS_PKGCONFIG iodrivers_base ais_base)
 target_link_libraries(nmea0183 marnav::marnav)
 

@@ -26,6 +26,12 @@ TEST_F(DriverTest, it_accepts_a_valid_NMEA_sentence) {
     ASSERT_EQ("APB", sentence->tag());
 }
 
+TEST_F(DriverTest, it_throws_MarnavParsingError_if_a_valid_sentence_is_extracted_that_cannot_be_parsed) {
+    string msg = "$GPZDA,160012.71,03,2004,-1,00*51\r\n";
+    pushStringToDriver(msg);
+    ASSERT_THROW(driver.readSentence(), MarnavParsingError);
+}
+
 TEST_F(DriverTest, it_handles_partial_messages) {
     string msg = "$GPAPB,A,A,0.10,R,N,V,V,11.0,M,DEST,11.0,M,11.0,M*12\r\n";
     for (size_t i = 0; i < msg.size() - 1; ++i) {

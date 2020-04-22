@@ -4,6 +4,7 @@
 #include <iodrivers_base/Driver.hpp>
 #include <marnav/nmea/nmea.hpp>
 #include <marnav/nmea/sentence.hpp>
+#include <nmea0183/Exceptions.hpp>
 
 namespace nmea0183 {
     /**

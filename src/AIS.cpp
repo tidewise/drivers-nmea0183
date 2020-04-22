@@ -1,4 +1,5 @@
 #include <nmea0183/AIS.hpp>
+#include <nmea0183/Exceptions.hpp>
 #include <marnav/nmea/vdm.hpp>
 #include <marnav/ais/ais.hpp>
 
@@ -7,38 +8,57 @@ using namespace marnav;
 using namespace nmea0183;
 
 AIS::AIS(Driver& driver)
-    : m_driver(driver) {
+    : mDriver(driver) {
 }
 
 unique_ptr<ais::message> AIS::readMessage() {
-    vector<pair<string, uint32_t>> payloads;
-
     while (true) {
-        auto sentence = m_driver.readSentence();
-        if (sentence->id() != nmea::sentence_id::VDM) {
-            continue;
+        auto sentence = mDriver.readSentence();
+        auto msg = processSentence(*sentence);
+        if (msg) {
+            return msg;
         }
+    }
+}
 
-        auto vdm = nmea::sentence_cast<nmea::vdm>(sentence);
+uint32_t AIS::getDiscardedSentenceCount() const {
+    return mDiscardedSentenceCount;
+}
 
-        size_t n_fragments = vdm->get_n_fragments();
-        size_t fragment = vdm->get_fragment();
-        if (fragment != payloads.size() + 1) {
-            payloads.clear();
-            if (fragment != 1) {
-                continue;
-            }
+unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence) {
+    if (sentence.id() != nmea::sentence_id::VDM) {
+        return unique_ptr<ais::message>();
+    }
+
+    auto vdm = nmea::sentence_cast<nmea::vdm>(&sentence);
+
+    size_t n_fragments = vdm->get_n_fragments();
+    size_t fragment = vdm->get_fragment();
+    if (fragment != payloads.size() + 1) {
+        mDiscardedSentenceCount += payloads.size();
+        payloads.clear();
+
+        // Go on if we're receiving the first fragment of a new message
+        if (fragment != 1) {
+            mDiscardedSentenceCount++;
+            return unique_ptr<ais::message>();
         }
+    }
 
-        payloads.push_back(make_pair(
-            vdm->get_payload(), vdm->get_n_fill_bits()
-        ));
+    payloads.push_back(make_pair(
+        vdm->get_payload(), vdm->get_n_fill_bits()
+    ));
 
-        if (payloads.size() == n_fragments) {
-            auto message = ais::make_message(payloads);
-            payloads.clear();
-            return message;
-        }
+    if (payloads.size() != n_fragments) {
+        return unique_ptr<ais::message>();
+    }
+
+    try {
+        auto payloads = std::move(this->payloads);
+        return ais::make_message(payloads);
+    }
+    catch (std::exception const& e) {
+        throw MarnavParsingError(e.what());
     }
 }
 
@@ -79,11 +99,15 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.time = base::Time::now();
     info.mmsi = message.get_mmsi();
     info.imo = message.get_imo_number();
-    info.name = message.get_shipname();
-    info.call_sign = message.get_callsign();
+    string name = message.get_shipname();
+    int first_not_space = name.find_last_not_of(" ");
+    info.name = name.substr(0, first_not_space + 1);
+    string call_sign = message.get_callsign();
+    first_not_space = call_sign.find_last_not_of(" ");
+    info.call_sign = call_sign.substr(0, first_not_space + 1);
     info.length = message.get_to_bow() + message.get_to_stern();
     info.width = message.get_to_port() + message.get_to_starboard();
-    info.draft = message.get_draught();
+    info.draft = static_cast<float>(message.get_draught()) / 10;
     info.ship_type = static_cast<ais_base::ShipType>(
         message.get_shiptype()
     );
