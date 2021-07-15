@@ -76,14 +76,14 @@ ais_base::Position AIS::getPosition(ais::message_01 const& message) {
     ais_base::Position position;
     position.time = base::Time::now();
     position.mmsi = message.get_mmsi();
-    position.course_over_ground = optionalAngleToRock(message.get_cog());
+    position.course_over_ground = optionalAngleToRock(message.get_cog()) * -1;
     position.longitude = optionalAngleToRock(message.get_longitude());
     position.latitude = optionalAngleToRock(message.get_latitude());
     position.status = static_cast<ais_base::NavigationalStatus>(
         message.get_nav_status()
     );
     position.high_accuracy_position = message.get_position_accuracy();
-    position.yaw = optionalAngleToRock(message.get_hdg());
+    position.yaw = optionalAngleToRock(message.get_hdg()) * -1;
     position.speed_over_ground = optionalFloatToRock(message.get_sog());
     position.maneuver_indicator = static_cast<ais_base::ManeuverIndicator>(
         message.get_maneuver_indicator()
