@@ -26,9 +26,30 @@ gps_base::GPS_SOLUTION_TYPES GPS::getPositionType(
         case marnav::nmea::mode_indicator::data_not_valid:
             return GPS_SOLUTION_TYPES::NO_SOLUTION;
         case marnav::nmea::mode_indicator::precise:
-            return GPS_SOLUTION_TYPES::INVALID;
+            return GPS_SOLUTION_TYPES::AUTONOMOUS_2D;
         default:
             return GPS_SOLUTION_TYPES::INVALID;
+    }
+}
+
+base::Time GPS::buildRockTime(
+    marnav::utils::optional<marnav::nmea::time> const& optional_time,
+    marnav::utils::optional<marnav::nmea::date> const& optional_date)
+{
+    if (optional_date.has_value() && optional_time.has_value()) {
+        auto date = optional_date.value();
+        auto time = optional_time.value();
+        return base::Time::fromTimeValues(date.year() + 2000,
+            static_cast<int>(date.mon()),
+            date.day(),
+            time.hour(),
+            time.minutes(),
+            time.seconds(),
+            time.milliseconds(),
+            0);
+    }
+    else {
+        return base::Time::now();
     }
 }
 
@@ -36,8 +57,7 @@ gps_base::Position nmea0183::GPS::getPosition(marnav::nmea::rmc const& rmc,
     marnav::nmea::gsa const& gsa)
 {
     gps_base::Position position;
-    // TODO: time now or message time?
-    position.time = base::Time::now();
+    position.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
     position.latitude = rmc.get_latitude().value();
     position.longitude = rmc.get_longitude().value();
     auto mode_indicator = rmc.get_mode_ind().value();
@@ -60,7 +80,6 @@ gps_base::SolutionQuality nmea0183::GPS::getSolutionQuality(marnav::nmea::gsa co
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
         auto satellite_id = gsa.get_satellite_id(i);
         if (satellite_id.has_value()) {
-            // TODO: check - used_satellite = satellite id?
             solution_quality.usedSatellites.push_back(satellite_id.value());
         }
     }

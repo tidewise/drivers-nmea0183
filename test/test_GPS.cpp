@@ -40,9 +40,11 @@ TEST_F(GPSTest, it_gets_a_gps_position_from_a_real_and_valid_rmc_and_gsa_message
     auto gsa_sentence = driver.readSentence();
     auto gsa = nmea::sentence_cast<nmea::gsa>(gsa_sentence);
     auto gps_position = GPS::getPosition(*rmc, *gsa);
+    base::Time expected_time = base::Time::fromTimeValues(2080, 01, 06, 0, 8, 48, 0, 0);
     ASSERT_NEAR(gps_position.latitude, -22.8977, 1e-3);
     ASSERT_NEAR(gps_position.longitude, -43.2015, 1e-3);
     ASSERT_EQ(gps_position.noOfSatellites, 0);
+    ASSERT_EQ(gps_position.time, expected_time);
     ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::NO_SOLUTION);
 }
 

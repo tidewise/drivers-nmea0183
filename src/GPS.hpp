@@ -18,6 +18,9 @@ namespace nmea0183 {
 
         gps_base::GPS_SOLUTION_TYPES getPositionType(
             marnav::utils::optional<marnav::nmea::mode_indicator> mode);
+        base::Time buildRockTime(
+            marnav::utils::optional<marnav::nmea::time> const& optional_time,
+            marnav::utils::optional<marnav::nmea::date> const& optional_date);
     };
 }
 
