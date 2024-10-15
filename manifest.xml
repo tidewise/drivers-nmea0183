@@ -13,5 +13,6 @@
   <depend package="drivers/marnav" />
   <depend package="drivers/iodrivers_base" />
   <depend package="drivers/ais_base" />
+  <depend package="drivers/gps_base" />
   <test_depend package="google-test" />
 </package>
