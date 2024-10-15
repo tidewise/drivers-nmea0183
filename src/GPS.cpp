@@ -6,11 +6,6 @@ using namespace marnav;
 using namespace std;
 using namespace gps_base;
 
-GPS::GPS(Driver& driver)
-    : m_driver(driver)
-{
-}
-
 gps_base::GPS_SOLUTION_TYPES GPS::getPositionType(
     marnav::utils::optional<marnav::nmea::mode_indicator> mode)
 {

@@ -10,19 +10,14 @@ namespace nmea0183 {
     /**
      *
      */
-    class GPS {
-    public:
-        GPS(Driver& driver);
-
+    namespace GPS {
         gps_base::Position getPosition(marnav::nmea::rmc const& rmc,
             marnav::nmea::gsa const& gsa);
 
         gps_base::SolutionQuality getSolutionQuality(marnav::nmea::gsa const& gsa);
 
-    private:
-        static gps_base::GPS_SOLUTION_TYPES getPositionType(
+        gps_base::GPS_SOLUTION_TYPES getPositionType(
             marnav::utils::optional<marnav::nmea::mode_indicator> mode);
-        Driver& m_driver;
     };
 }
 
