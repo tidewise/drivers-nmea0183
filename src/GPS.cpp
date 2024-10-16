@@ -52,15 +52,22 @@ base::Time GPS::buildRockTime(
     }
 }
 
-gps_base::Position nmea0183::GPS::getPosition(marnav::nmea::rmc const& rmc,
-    marnav::nmea::gsa const& gsa)
+Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
 {
-    gps_base::Position position;
+    Position position;
     position.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
-    position.latitude = rmc.get_latitude().value();
-    position.longitude = rmc.get_longitude().value();
     auto mode_indicator = rmc.get_mode_ind().value();
     position.positionType = getPositionType(mode_indicator);
+    if (position.positionType != GPS_SOLUTION_TYPES::INVALID) {
+        auto optional_latitude = rmc.get_latitude();
+        auto optional_longitude = rmc.get_longitude();
+        if (optional_latitude.has_value()) {
+            position.latitude = optional_latitude.value();
+        }
+        if (optional_longitude.has_value()) {
+            position.longitude = optional_longitude.value();
+        }
+    }
     position.noOfSatellites = 0;
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
         if (gsa.get_satellite_id(i).has_value()) {
