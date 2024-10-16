@@ -50,9 +50,11 @@ TEST_F(GPSTest, it_gets_a_gps_solution_quality_from_a_real_and_valid_gsa_message
     auto gsa_sentence = driver.readSentence();
     auto gsa = nmea::sentence_cast<nmea::gsa>(gsa_sentence);
     auto solution_quality = GPS::getSolutionQuality(*gsa);
+    std::vector<int> expected_satellites = {};
     ASSERT_NEAR(solution_quality.hdop, 1.7, 1e-3);
     ASSERT_NEAR(solution_quality.pdop, 2.0, 1e-3);
     ASSERT_NEAR(solution_quality.vdop, 1.0, 1e-3);
+    ASSERT_EQ(expected_satellites, solution_quality.usedSatellites);
 }
 
 TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_position)
@@ -86,8 +88,10 @@ TEST_F(GPSTest, it_converts_a_gsa_message_into_gps_solution_quality)
     gsa.set_hdop(1.1);
     gsa.set_pdop(2.2);
     gsa.set_vdop(3.3);
+    std::vector<int> expected_satellites = {55, 155};
     auto solution_quality = GPS::getSolutionQuality(gsa);
     ASSERT_NEAR(solution_quality.hdop, 1.1, 1e-3);
     ASSERT_NEAR(solution_quality.pdop, 2.2, 1e-3);
     ASSERT_NEAR(solution_quality.vdop, 3.3, 1e-3);
+    ASSERT_EQ(expected_satellites, solution_quality.usedSatellites);
 }

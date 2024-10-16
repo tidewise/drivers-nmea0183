@@ -63,6 +63,8 @@ Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
     }
     else {
         position.time = base::Time::now();
+        position.latitude = base::unknown<double>();
+        position.longitude = base::unknown<double>();
     }
     position.noOfSatellites = 0;
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
@@ -81,13 +83,22 @@ SolutionQuality GPS::getSolutionQuality(nmea::gsa const& gsa)
     if (optional_pdop.has_value()) {
         solution_quality.pdop = optional_pdop.value();
     }
+    else {
+        solution_quality.pdop = base::unknown<double>();
+    }
     auto optional_hdop = gsa.get_hdop();
     if (optional_hdop.has_value()) {
         solution_quality.hdop = optional_hdop.value();
     }
+    else {
+        solution_quality.hdop = base::unknown<double>();
+    }
     auto optional_vdop = gsa.get_vdop();
     if (optional_vdop.has_value()) {
         solution_quality.vdop = optional_vdop.value();
+    }
+    else {
+        solution_quality.vdop = base::unknown<double>();
     }
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
         auto satellite_id = gsa.get_satellite_id(i);
