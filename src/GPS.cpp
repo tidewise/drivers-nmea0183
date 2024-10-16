@@ -8,7 +8,6 @@ using namespace gps_base;
 
 GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mode)
 {
-    // TODO: check returns
     switch (*mode) {
         case nmea::mode_indicator::invalid:
             return GPS_SOLUTION_TYPES::INVALID;
@@ -77,6 +76,7 @@ Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
 SolutionQuality GPS::getSolutionQuality(nmea::gsa const& gsa)
 {
     SolutionQuality solution_quality;
+    solution_quality.time = base::Time::now();
     auto optional_pdop = gsa.get_pdop();
     if (optional_pdop.has_value()) {
         solution_quality.pdop = optional_pdop.value();
