@@ -34,31 +34,25 @@ GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mo
 base::Time GPS::buildRockTime(utils::optional<nmea::time> const& optional_time,
     utils::optional<nmea::date> const& optional_date)
 {
-    // TODO: change check to 1980
-    if (optional_date.has_value() && optional_time.has_value()) {
-        auto date = optional_date.value();
-        auto time = optional_time.value();
-        return base::Time::fromTimeValues(date.year() + 2000,
-            static_cast<int>(date.mon()),
-            date.day(),
-            time.hour(),
-            time.minutes(),
-            time.seconds(),
-            time.milliseconds(),
-            0);
-    }
-    else {
-        return base::Time::now();
-    }
+    auto date = optional_date.value();
+    auto time = optional_time.value();
+    return base::Time::fromTimeValues(date.year() + 2000,
+        static_cast<int>(date.mon()),
+        date.day(),
+        time.hour(),
+        time.minutes(),
+        time.seconds(),
+        time.milliseconds(),
+        0);
 }
 
 Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
 {
     Position position;
-    position.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
     auto mode_indicator = rmc.get_mode_ind().value();
     position.positionType = getPositionType(mode_indicator);
     if (position.positionType != GPS_SOLUTION_TYPES::INVALID) {
+        position.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
         auto optional_latitude = rmc.get_latitude();
         auto optional_longitude = rmc.get_longitude();
         if (optional_latitude.has_value()) {
@@ -67,6 +61,9 @@ Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
         if (optional_longitude.has_value()) {
             position.longitude = optional_longitude.value();
         }
+    }
+    else {
+        position.time = base::Time::now();
     }
     position.noOfSatellites = 0;
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
@@ -81,18 +78,15 @@ SolutionQuality GPS::getSolutionQuality(nmea::gsa const& gsa)
 {
     SolutionQuality solution_quality;
     auto optional_pdop = gsa.get_pdop();
-    if (optional_pdop.has_value())
-    {
+    if (optional_pdop.has_value()) {
         solution_quality.pdop = optional_pdop.value();
     }
     auto optional_hdop = gsa.get_hdop();
-    if (optional_hdop.has_value())
-    {
+    if (optional_hdop.has_value()) {
         solution_quality.hdop = optional_hdop.value();
     }
     auto optional_vdop = gsa.get_vdop();
-    if (optional_vdop.has_value())
-    {
+    if (optional_vdop.has_value()) {
         solution_quality.vdop = optional_vdop.value();
     }
     for (int i = 0; i < gsa.max_satellite_ids; i++) {

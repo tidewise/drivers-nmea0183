@@ -9,8 +9,6 @@ using namespace std;
 using namespace nmea0183;
 
 struct GPSTest : public ::testing::Test, public iodrivers_base::Fixture<Driver> {
-
-
     GPSTest()
     {
     }
@@ -40,12 +38,10 @@ TEST_F(GPSTest, it_gets_a_gps_position_from_a_real_and_valid_rmc_and_gsa_message
     auto gsa_sentence = driver.readSentence();
     auto gsa = nmea::sentence_cast<nmea::gsa>(gsa_sentence);
     auto gps_position = GPS::getPosition(*rmc, *gsa);
-    base::Time expected_time = base::Time::fromTimeValues(2080, 01, 06, 0, 8, 48, 0, 0);
-    ASSERT_NEAR(gps_position.latitude, -22.8977, 1e-3);
-    ASSERT_NEAR(gps_position.longitude, -43.2015, 1e-3);
+    ASSERT_TRUE(base::isNaN(gps_position.latitude));
+    ASSERT_TRUE(base::isNaN(gps_position.longitude));
     ASSERT_EQ(gps_position.noOfSatellites, 0);
-    ASSERT_EQ(gps_position.time, expected_time);
-    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::NO_SOLUTION);
+    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::INVALID);
 }
 
 TEST_F(GPSTest, it_gets_a_gps_solution_quality_from_a_real_and_valid_gsa_messages)
@@ -65,10 +61,17 @@ TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_position)
     rmc.set_lat(geo::latitude{12.34});
     rmc.set_lon(geo::longitude{10.12});
     rmc.set_mode_indicator(nmea::mode_indicator::autonomous);
+    nmea::date date = nmea::date::parse("010224");
+    rmc.set_date(date);
+    nmea::time time = nmea::time::parse("013059.123");
+    rmc.set_time_utc(time);
     marnav::nmea::gsa gsa;
     gsa.set_satellite_id(0, 55);
     gsa.set_satellite_id(1, 155);
     auto gps_position = GPS::getPosition(rmc, gsa);
+    base::Time expected_time =
+        base::Time::fromTimeValues(2024, 2, 1, 1, 30, 59, 123, 0);
+    ASSERT_EQ(gps_position.time, expected_time);
     ASSERT_NEAR(gps_position.latitude, 12.34, 1e-3);
     ASSERT_NEAR(gps_position.longitude, 10.12, 1e-3);
     ASSERT_EQ(gps_position.noOfSatellites, 2);
@@ -88,4 +91,3 @@ TEST_F(GPSTest, it_converts_a_gsa_message_into_gps_solution_quality)
     ASSERT_NEAR(solution_quality.pdop, 2.2, 1e-3);
     ASSERT_NEAR(solution_quality.vdop, 3.3, 1e-3);
 }
-
