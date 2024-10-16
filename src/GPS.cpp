@@ -77,12 +77,24 @@ Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
     return position;
 }
 
-gps_base::SolutionQuality nmea0183::GPS::getSolutionQuality(marnav::nmea::gsa const& gsa)
+SolutionQuality GPS::getSolutionQuality(nmea::gsa const& gsa)
 {
-    gps_base::SolutionQuality solution_quality;
-    solution_quality.pdop = gsa.get_pdop().value();
-    solution_quality.hdop = gsa.get_hdop().value();
-    solution_quality.vdop = gsa.get_vdop().value();
+    SolutionQuality solution_quality;
+    auto optional_pdop = gsa.get_pdop();
+    if (optional_pdop.has_value())
+    {
+        solution_quality.pdop = optional_pdop.value();
+    }
+    auto optional_hdop = gsa.get_hdop();
+    if (optional_hdop.has_value())
+    {
+        solution_quality.hdop = optional_hdop.value();
+    }
+    auto optional_vdop = gsa.get_vdop();
+    if (optional_vdop.has_value())
+    {
+        solution_quality.vdop = optional_vdop.value();
+    }
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
         auto satellite_id = gsa.get_satellite_id(i);
         if (satellite_id.has_value()) {
