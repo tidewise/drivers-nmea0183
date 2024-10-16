@@ -6,27 +6,26 @@ using namespace marnav;
 using namespace std;
 using namespace gps_base;
 
-gps_base::GPS_SOLUTION_TYPES GPS::getPositionType(
-    marnav::utils::optional<marnav::nmea::mode_indicator> mode)
+GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mode)
 {
     // TODO: check returns
     switch (*mode) {
-        case marnav::nmea::mode_indicator::invalid:
+        case nmea::mode_indicator::invalid:
             return GPS_SOLUTION_TYPES::INVALID;
-        case marnav::nmea::mode_indicator::autonomous:
-            return GPS_SOLUTION_TYPES::AUTONOMOUS_2D;
-        case marnav::nmea::mode_indicator::differential:
+        case nmea::mode_indicator::autonomous:
+            return GPS_SOLUTION_TYPES::AUTONOMOUS;
+        case nmea::mode_indicator::differential:
             return GPS_SOLUTION_TYPES::DIFFERENTIAL;
-        case marnav::nmea::mode_indicator::estimated:
+        case nmea::mode_indicator::estimated:
             return GPS_SOLUTION_TYPES::INVALID;
-        case marnav::nmea::mode_indicator::manual_input:
+        case nmea::mode_indicator::manual_input:
             return GPS_SOLUTION_TYPES::INVALID;
-        case marnav::nmea::mode_indicator::simulated:
+        case nmea::mode_indicator::simulated:
             return GPS_SOLUTION_TYPES::INVALID;
-        case marnav::nmea::mode_indicator::data_not_valid:
-            return GPS_SOLUTION_TYPES::NO_SOLUTION;
-        case marnav::nmea::mode_indicator::precise:
-            return GPS_SOLUTION_TYPES::AUTONOMOUS_2D;
+        case nmea::mode_indicator::data_not_valid:
+            return GPS_SOLUTION_TYPES::INVALID;
+        case nmea::mode_indicator::precise:
+            return GPS_SOLUTION_TYPES::AUTONOMOUS;
         default:
             return GPS_SOLUTION_TYPES::INVALID;
     }

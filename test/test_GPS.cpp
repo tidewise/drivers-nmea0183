@@ -72,7 +72,7 @@ TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_position)
     ASSERT_NEAR(gps_position.latitude, 12.34, 1e-3);
     ASSERT_NEAR(gps_position.longitude, 10.12, 1e-3);
     ASSERT_EQ(gps_position.noOfSatellites, 2);
-    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::AUTONOMOUS_2D);
+    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::AUTONOMOUS);
 }
 
 TEST_F(GPSTest, it_converts_a_gsa_message_into_gps_solution_quality)
