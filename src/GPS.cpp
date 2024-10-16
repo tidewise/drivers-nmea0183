@@ -31,10 +31,10 @@ GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mo
     }
 }
 
-base::Time GPS::buildRockTime(
-    marnav::utils::optional<marnav::nmea::time> const& optional_time,
-    marnav::utils::optional<marnav::nmea::date> const& optional_date)
+base::Time GPS::buildRockTime(utils::optional<nmea::time> const& optional_time,
+    utils::optional<nmea::date> const& optional_date)
 {
+    // TODO: change check to 1980
     if (optional_date.has_value() && optional_time.has_value()) {
         auto date = optional_date.value();
         auto time = optional_time.value();
