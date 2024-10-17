@@ -6,9 +6,9 @@ using namespace marnav;
 using namespace std;
 using namespace gps_base;
 
-GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mode)
+GPS_SOLUTION_TYPES GPS::getPositionType(nmea::mode_indicator mode)
 {
-    switch (*mode) {
+    switch (mode) {
         case nmea::mode_indicator::invalid:
             return GPS_SOLUTION_TYPES::INVALID;
         case nmea::mode_indicator::autonomous:
@@ -53,8 +53,14 @@ base::Time GPS::buildRockTime(utils::optional<nmea::time> const& optional_time,
 Solution GPS::getSolution(nmea::rmc const& rmc, nmea::gsa const& gsa)
 {
     Solution solution;
-    auto mode_indicator = rmc.get_mode_ind().value();
-    auto position_type = getPositionType(mode_indicator);
+    GPS_SOLUTION_TYPES position_type;
+    if (rmc.get_mode_ind().has_value()) {
+        auto mode_indicator = rmc.get_mode_ind().value();
+        position_type = getPositionType(mode_indicator);
+    }
+    else {
+        position_type = GPS_SOLUTION_TYPES::INVALID;
+    }
     auto optional_latitude = rmc.get_latitude();
     auto optional_longitude = rmc.get_longitude();
     if (position_type != GPS_SOLUTION_TYPES::INVALID && optional_latitude.has_value() &&
