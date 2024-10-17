@@ -49,19 +49,18 @@ Solution GPS::getSolution(nmea::rmc const& rmc, nmea::gsa const& gsa)
 {
     Solution solution;
     auto mode_indicator = rmc.get_mode_ind().value();
-    solution.positionType = getPositionType(mode_indicator);
-    if (solution.positionType != GPS_SOLUTION_TYPES::INVALID) {
+    auto position_type = getPositionType(mode_indicator);
+    auto optional_latitude = rmc.get_latitude();
+    auto optional_longitude = rmc.get_longitude();
+    if (position_type != GPS_SOLUTION_TYPES::INVALID &&
+        optional_latitude.has_value() && optional_longitude.has_value()) {
         solution.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
-        auto optional_latitude = rmc.get_latitude();
-        auto optional_longitude = rmc.get_longitude();
-        if (optional_latitude.has_value()) {
-            solution.latitude = optional_latitude.value();
-        }
-        if (optional_longitude.has_value()) {
-            solution.longitude = optional_longitude.value();
-        }
+        solution.latitude = optional_latitude.value();
+        solution.longitude = optional_longitude.value();
+        solution.positionType = position_type;
     }
     else {
+        solution.positionType = gps_base::GPS_SOLUTION_TYPES::INVALID;
         solution.time = base::Time::now();
         solution.latitude = base::unknown<double>();
         solution.longitude = base::unknown<double>();
