@@ -33,16 +33,21 @@ GPS_SOLUTION_TYPES GPS::getPositionType(utils::optional<nmea::mode_indicator> mo
 base::Time GPS::buildRockTime(utils::optional<nmea::time> const& optional_time,
     utils::optional<nmea::date> const& optional_date)
 {
-    auto date = optional_date.value();
-    auto time = optional_time.value();
-    return base::Time::fromTimeValues(date.year() + 2000,
-        static_cast<int>(date.mon()),
-        date.day(),
-        time.hour(),
-        time.minutes(),
-        time.seconds(),
-        time.milliseconds(),
-        0);
+    if (optional_date.has_value() && optional_time.has_value()) {
+        auto date = optional_date.value();
+        auto time = optional_time.value();
+        return base::Time::fromTimeValues(date.year() + 2000,
+            static_cast<int>(date.mon()),
+            date.day(),
+            time.hour(),
+            time.minutes(),
+            time.seconds(),
+            time.milliseconds(),
+            0);
+    }
+    else {
+        return base::Time::now();
+    }
 }
 
 Solution GPS::getSolution(nmea::rmc const& rmc, nmea::gsa const& gsa)
@@ -52,8 +57,8 @@ Solution GPS::getSolution(nmea::rmc const& rmc, nmea::gsa const& gsa)
     auto position_type = getPositionType(mode_indicator);
     auto optional_latitude = rmc.get_latitude();
     auto optional_longitude = rmc.get_longitude();
-    if (position_type != GPS_SOLUTION_TYPES::INVALID &&
-        optional_latitude.has_value() && optional_longitude.has_value()) {
+    if (position_type != GPS_SOLUTION_TYPES::INVALID && optional_latitude.has_value() &&
+        optional_longitude.has_value()) {
         solution.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
         solution.latitude = optional_latitude.value();
         solution.longitude = optional_longitude.value();
