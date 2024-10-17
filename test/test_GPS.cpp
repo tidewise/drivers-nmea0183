@@ -94,3 +94,19 @@ TEST_F(GPSTest, it_converts_a_gsa_message_into_gps_solution_quality)
     ASSERT_NEAR(solution_quality.vdop, 3.3, 1e-3);
     ASSERT_EQ(expected_satellites, solution_quality.usedSatellites);
 }
+
+TEST_F(GPSTest, it_accepts_messages_without_mode_indicator)
+{
+    marnav::nmea::rmc rmc;
+    rmc.set_lat(geo::latitude{12.34});
+    rmc.set_lon(geo::longitude{10.12});
+    nmea::date date = nmea::date::parse("010224");
+    rmc.set_date(date);
+    nmea::time time = nmea::time::parse("013059.123");
+    rmc.set_time_utc(time);
+    marnav::nmea::gsa gsa;
+    gsa.set_satellite_id(0, 55);
+    gsa.set_satellite_id(1, 155);
+    auto gps_solution = GPS::getSolution(rmc, gsa);
+    ASSERT_EQ(gps_solution.positionType, gps_base::GPS_SOLUTION_TYPES::INVALID);
+}
