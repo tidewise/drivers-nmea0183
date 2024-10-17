@@ -63,16 +63,10 @@ TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_solution)
     rmc.set_lat(geo::latitude{12.34});
     rmc.set_lon(geo::longitude{10.12});
     rmc.set_mode_indicator(nmea::mode_indicator::autonomous);
-    nmea::date date = nmea::date::parse("010224");
-    rmc.set_date(date);
-    nmea::time time = nmea::time::parse("013059.123");
-    rmc.set_time_utc(time);
     marnav::nmea::gsa gsa;
     gsa.set_satellite_id(0, 55);
     gsa.set_satellite_id(1, 155);
     auto gps_solution = GPS::getSolution(rmc, gsa);
-    base::Time expected_time = base::Time::fromTimeValues(2024, 2, 1, 1, 30, 59, 123, 0);
-    ASSERT_EQ(gps_solution.time, expected_time);
     ASSERT_NEAR(gps_solution.latitude, 12.34, 1e-3);
     ASSERT_NEAR(gps_solution.longitude, 10.12, 1e-3);
     ASSERT_EQ(gps_solution.noOfSatellites, 2);
@@ -100,10 +94,6 @@ TEST_F(GPSTest, it_accepts_messages_without_mode_indicator)
     marnav::nmea::rmc rmc;
     rmc.set_lat(geo::latitude{12.34});
     rmc.set_lon(geo::longitude{10.12});
-    nmea::date date = nmea::date::parse("010224");
-    rmc.set_date(date);
-    nmea::time time = nmea::time::parse("013059.123");
-    rmc.set_time_utc(time);
     marnav::nmea::gsa gsa;
     gsa.set_satellite_id(0, 55);
     gsa.set_satellite_id(1, 155);
