@@ -29,7 +29,7 @@ const std::string rmc_string =
     "$GNRMC,000848.00,V,2253.8645,S,04312.0880,W,,,060180,,,N*51\r\n";
 const std::string gsa_string = "$GNGSA,A,1,,,,,,,,,,,,,2.0,1.7,1.0*2B\r\n";
 
-TEST_F(GPSTest, it_gets_a_gps_position_from_a_real_and_valid_rmc_and_gsa_messages)
+TEST_F(GPSTest, it_gets_a_gps_solution_from_a_real_and_valid_rmc_and_gsa_messages)
 {
     pushStringToDriver(rmc_string);
     auto rmc_sentence = driver.readSentence();
@@ -37,11 +37,11 @@ TEST_F(GPSTest, it_gets_a_gps_position_from_a_real_and_valid_rmc_and_gsa_message
     pushStringToDriver(gsa_string);
     auto gsa_sentence = driver.readSentence();
     auto gsa = nmea::sentence_cast<nmea::gsa>(gsa_sentence);
-    auto gps_position = GPS::getPosition(*rmc, *gsa);
-    ASSERT_TRUE(base::isNaN(gps_position.latitude));
-    ASSERT_TRUE(base::isNaN(gps_position.longitude));
-    ASSERT_EQ(gps_position.noOfSatellites, 0);
-    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::INVALID);
+    auto gps_solution = GPS::getSolution(*rmc, *gsa);
+    ASSERT_TRUE(base::isNaN(gps_solution.latitude));
+    ASSERT_TRUE(base::isNaN(gps_solution.longitude));
+    ASSERT_EQ(gps_solution.noOfSatellites, 0);
+    ASSERT_EQ(gps_solution.positionType, gps_base::GPS_SOLUTION_TYPES::INVALID);
 }
 
 TEST_F(GPSTest, it_gets_a_gps_solution_quality_from_a_real_and_valid_gsa_messages)
@@ -57,7 +57,7 @@ TEST_F(GPSTest, it_gets_a_gps_solution_quality_from_a_real_and_valid_gsa_message
     ASSERT_EQ(expected_satellites, solution_quality.usedSatellites);
 }
 
-TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_position)
+TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_solution)
 {
     marnav::nmea::rmc rmc;
     rmc.set_lat(geo::latitude{12.34});
@@ -70,14 +70,13 @@ TEST_F(GPSTest, it_converts_rmc_with_a_gsa_message_into_gps_position)
     marnav::nmea::gsa gsa;
     gsa.set_satellite_id(0, 55);
     gsa.set_satellite_id(1, 155);
-    auto gps_position = GPS::getPosition(rmc, gsa);
-    base::Time expected_time =
-        base::Time::fromTimeValues(2024, 2, 1, 1, 30, 59, 123, 0);
-    ASSERT_EQ(gps_position.time, expected_time);
-    ASSERT_NEAR(gps_position.latitude, 12.34, 1e-3);
-    ASSERT_NEAR(gps_position.longitude, 10.12, 1e-3);
-    ASSERT_EQ(gps_position.noOfSatellites, 2);
-    ASSERT_EQ(gps_position.positionType, gps_base::GPS_SOLUTION_TYPES::AUTONOMOUS);
+    auto gps_solution = GPS::getSolution(rmc, gsa);
+    base::Time expected_time = base::Time::fromTimeValues(2024, 2, 1, 1, 30, 59, 123, 0);
+    ASSERT_EQ(gps_solution.time, expected_time);
+    ASSERT_NEAR(gps_solution.latitude, 12.34, 1e-3);
+    ASSERT_NEAR(gps_solution.longitude, 10.12, 1e-3);
+    ASSERT_EQ(gps_solution.noOfSatellites, 2);
+    ASSERT_EQ(gps_solution.positionType, gps_base::GPS_SOLUTION_TYPES::AUTONOMOUS);
 }
 
 TEST_F(GPSTest, it_converts_a_gsa_message_into_gps_solution_quality)

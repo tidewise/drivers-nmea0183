@@ -45,34 +45,34 @@ base::Time GPS::buildRockTime(utils::optional<nmea::time> const& optional_time,
         0);
 }
 
-Position GPS::getPosition(nmea::rmc const& rmc, nmea::gsa const& gsa)
+Solution GPS::getSolution(nmea::rmc const& rmc, nmea::gsa const& gsa)
 {
-    Position position;
+    Solution solution;
     auto mode_indicator = rmc.get_mode_ind().value();
-    position.positionType = getPositionType(mode_indicator);
-    if (position.positionType != GPS_SOLUTION_TYPES::INVALID) {
-        position.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
+    solution.positionType = getPositionType(mode_indicator);
+    if (solution.positionType != GPS_SOLUTION_TYPES::INVALID) {
+        solution.time = buildRockTime(rmc.get_time_utc(), rmc.get_date());
         auto optional_latitude = rmc.get_latitude();
         auto optional_longitude = rmc.get_longitude();
         if (optional_latitude.has_value()) {
-            position.latitude = optional_latitude.value();
+            solution.latitude = optional_latitude.value();
         }
         if (optional_longitude.has_value()) {
-            position.longitude = optional_longitude.value();
+            solution.longitude = optional_longitude.value();
         }
     }
     else {
-        position.time = base::Time::now();
-        position.latitude = base::unknown<double>();
-        position.longitude = base::unknown<double>();
+        solution.time = base::Time::now();
+        solution.latitude = base::unknown<double>();
+        solution.longitude = base::unknown<double>();
     }
-    position.noOfSatellites = 0;
+    solution.noOfSatellites = 0;
     for (int i = 0; i < gsa.max_satellite_ids; i++) {
         if (gsa.get_satellite_id(i).has_value()) {
-            position.noOfSatellites += 1;
+            solution.noOfSatellites += 1;
         }
     }
-    return position;
+    return solution;
 }
 
 SolutionQuality GPS::getSolutionQuality(nmea::gsa const& gsa)

@@ -11,7 +11,7 @@ namespace nmea0183 {
      *
      */
     namespace GPS {
-        gps_base::Position getPosition(marnav::nmea::rmc const& rmc,
+        gps_base::Solution getSolution(marnav::nmea::rmc const& rmc,
             marnav::nmea::gsa const& gsa);
 
         gps_base::SolutionQuality getSolutionQuality(marnav::nmea::gsa const& gsa);
