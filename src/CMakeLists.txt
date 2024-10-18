@@ -10,9 +10,9 @@ foreach(marnav_INC ${marnav_INCLUDE_DIRECTORIES})
 endforeach()
 
 rock_library(nmea0183
-    SOURCES Driver.cpp AIS.cpp
-    HEADERS Driver.hpp AIS.hpp Exceptions.hpp
-    DEPS_PKGCONFIG iodrivers_base ais_base)
+    SOURCES Driver.cpp AIS.cpp GPS.cpp
+    HEADERS Driver.hpp AIS.hpp GPS.hpp Exceptions.hpp
+    DEPS_PKGCONFIG iodrivers_base ais_base gps_base)
 target_link_libraries(nmea0183 marnav::marnav)
 
 rock_executable(nmea0183_ctl Main.cpp
