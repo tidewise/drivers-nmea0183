@@ -7,6 +7,8 @@ using namespace std;
 using namespace marnav;
 using namespace nmea0183;
 
+double constexpr KNOTS_TO_MS = 0.514444;
+
 AIS::AIS(Driver& driver)
     : mDriver(driver) {
 }
@@ -84,7 +86,7 @@ ais_base::Position AIS::getPosition(ais::message_01 const& message) {
     );
     position.high_accuracy_position = message.get_position_accuracy();
     position.yaw = optionalAngleToRock(message.get_hdg()) * -1;
-    position.speed_over_ground = optionalFloatToRock(message.get_sog());
+    position.speed_over_ground = optionalFloatToRock(message.get_sog()) * KNOTS_TO_MS;
     position.maneuver_indicator = static_cast<ais_base::ManeuverIndicator>(
         message.get_maneuver_indicator()
     );

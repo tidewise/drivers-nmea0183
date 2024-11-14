@@ -95,7 +95,7 @@ TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
     ASSERT_EQ(0, position.imo);
     ASSERT_EQ(ais_base::STATUS_AT_ANCHOR, position.status);
     ASSERT_TRUE(base::isUnknown(position.yaw_velocity)); // not converted
-    ASSERT_FLOAT_EQ(10, position.speed_over_ground);
+    ASSERT_FLOAT_EQ(5.14444, position.speed_over_ground);
     ASSERT_TRUE(position.high_accuracy_position);
     ASSERT_FLOAT_EQ(-15, position.course_over_ground.getDeg());
     ASSERT_FLOAT_EQ(-25, position.yaw.getDeg());
