@@ -1,17 +1,21 @@
+#include <marnav/ais/ais.hpp>
+#include <marnav/nmea/vdm.hpp>
 #include <nmea0183/AIS.hpp>
 #include <nmea0183/Exceptions.hpp>
-#include <marnav/nmea/vdm.hpp>
-#include <marnav/ais/ais.hpp>
 
 using namespace std;
 using namespace marnav;
 using namespace nmea0183;
 
+double constexpr KNOTS_TO_MS = 0.514444;
+
 AIS::AIS(Driver& driver)
-    : mDriver(driver) {
+    : mDriver(driver)
+{
 }
 
-unique_ptr<ais::message> AIS::readMessage() {
+unique_ptr<ais::message> AIS::readMessage()
+{
     while (true) {
         auto sentence = mDriver.readSentence();
         auto msg = processSentence(*sentence);
@@ -21,11 +25,13 @@ unique_ptr<ais::message> AIS::readMessage() {
     }
 }
 
-uint32_t AIS::getDiscardedSentenceCount() const {
+uint32_t AIS::getDiscardedSentenceCount() const
+{
     return mDiscardedSentenceCount;
 }
 
-unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence) {
+unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence)
+{
     if (sentence.id() != nmea::sentence_id::VDM) {
         return unique_ptr<ais::message>();
     }
@@ -45,9 +51,7 @@ unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence) {
         }
     }
 
-    payloads.push_back(make_pair(
-        vdm->get_payload(), vdm->get_n_fill_bits()
-    ));
+    payloads.push_back(make_pair(vdm->get_payload(), vdm->get_n_fill_bits()));
 
     if (payloads.size() != n_fragments) {
         return unique_ptr<ais::message>();
@@ -62,39 +66,38 @@ unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence) {
     }
 }
 
-template<typename T>
-T optionalFloatToRock(utils::optional<T> opt) {
+template <typename T> T optionalFloatToRock(utils::optional<T> opt)
+{
     return opt ? opt.value() : base::unknown<T>();
 }
 
-template<typename T>
-base::Angle optionalAngleToRock(utils::optional<T> opt) {
+template <typename T> base::Angle optionalAngleToRock(utils::optional<T> opt)
+{
     return opt ? base::Angle::fromDeg(opt.value()) : base::Angle();
 }
 
-ais_base::Position AIS::getPosition(ais::message_01 const& message) {
+ais_base::Position AIS::getPosition(ais::message_01 const& message)
+{
     ais_base::Position position;
     position.time = base::Time::now();
     position.mmsi = message.get_mmsi();
     position.course_over_ground = optionalAngleToRock(message.get_cog()) * -1;
     position.longitude = optionalAngleToRock(message.get_longitude());
     position.latitude = optionalAngleToRock(message.get_latitude());
-    position.status = static_cast<ais_base::NavigationalStatus>(
-        message.get_nav_status()
-    );
+    position.status = static_cast<ais_base::NavigationalStatus>(message.get_nav_status());
     position.high_accuracy_position = message.get_position_accuracy();
     position.yaw = optionalAngleToRock(message.get_hdg()) * -1;
-    position.speed_over_ground = optionalFloatToRock(message.get_sog());
-    position.maneuver_indicator = static_cast<ais_base::ManeuverIndicator>(
-        message.get_maneuver_indicator()
-    );
+    position.speed_over_ground = optionalFloatToRock(message.get_sog()) * KNOTS_TO_MS;
+    position.maneuver_indicator =
+        static_cast<ais_base::ManeuverIndicator>(message.get_maneuver_indicator());
     position.raim = message.get_raim();
     position.radio_status = message.get_radio_status();
     position.ensureEnumsValid();
     return position;
 }
 
-ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& message) {
+ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& message)
+{
     ais_base::VesselInformation info;
     info.time = base::Time::now();
     info.mmsi = message.get_mmsi();
@@ -108,19 +111,17 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.length = message.get_to_bow() + message.get_to_stern();
     info.width = message.get_to_port() + message.get_to_starboard();
     info.draft = static_cast<float>(message.get_draught()) / 10;
-    info.ship_type = static_cast<ais_base::ShipType>(
-        message.get_shiptype()
-    );
+    info.ship_type = static_cast<ais_base::ShipType>(message.get_shiptype());
     info.epfd_fix = static_cast<ais_base::EPFDFixType>(message.get_epfd_fix());
-    info.reference_position = Eigen::Vector3d(
-        message.get_to_stern(), message.get_to_starboard(), 0
-    );
+    info.reference_position =
+        Eigen::Vector3d(message.get_to_stern(), message.get_to_starboard(), 0);
 
     info.ensureEnumsValid();
     return info;
 }
 
-ais_base::VoyageInformation AIS::getVoyageInformation(ais::message_05 const& message) {
+ais_base::VoyageInformation AIS::getVoyageInformation(ais::message_05 const& message)
+{
     ais_base::VoyageInformation info;
     info.time = base::Time::now();
     info.mmsi = message.get_mmsi();

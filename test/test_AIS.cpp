@@ -6,20 +6,22 @@
 using namespace marnav;
 using namespace nmea0183;
 
-struct AISTest : public ::testing::Test,
-                 public iodrivers_base::Fixture<Driver> {
+struct AISTest : public ::testing::Test, public iodrivers_base::Fixture<Driver> {
 
     AIS ais;
 
     AISTest()
-        : ais(driver) {
+        : ais(driver)
+    {
     }
 
-    void pushCharToDriver(uint8_t c) {
+    void pushCharToDriver(uint8_t c)
+    {
         pushDataToDriver(&c, &c + 1);
     }
 
-    void pushStringToDriver(std::string const& msg) {
+    void pushStringToDriver(std::string const& msg)
+    {
         uint8_t const* msg_u8 = reinterpret_cast<uint8_t const*>(msg.c_str());
         pushDataToDriver(msg_u8, msg_u8 + msg.size());
     }
@@ -27,15 +29,14 @@ struct AISTest : public ::testing::Test,
 
 const std::vector<std::string> ais_strings = {
     "!AIVDM,2,1,3,B,55P5TL01VIaAL@7WKO@mBplU@<PDhh000000001S;AJ::4A80?4i@E53,0*3E\r\n",
-    "!AIVDM,2,2,3,B,1@0000000000000,2*55\r\n"
-};
+    "!AIVDM,2,2,3,B,1@0000000000000,2*55\r\n"};
 
 const std::vector<std::string> invalid_ais_strings = {
     "$AIVDM,2,1,3,B,55P5TL01VIaAL@7WKO@BplU@<PDhh000000001S;AJ::4A80?4i@E53,0*53\r\n",
-    "!AIVDM,2,2,3,B,1@0000000000000,2*55\r\n"
-};
+    "!AIVDM,2,2,3,B,1@0000000000000,2*55\r\n"};
 
-TEST_F(AISTest, it_reassembles_AIS_messages) {
+TEST_F(AISTest, it_reassembles_AIS_messages)
+{
     pushStringToDriver(ais_strings[0]);
     pushStringToDriver(ais_strings[1]);
 
@@ -44,7 +45,8 @@ TEST_F(AISTest, it_reassembles_AIS_messages) {
     ASSERT_EQ(0, ais.getDiscardedSentenceCount());
 }
 
-TEST_F(AISTest, it_throws_MarnavParsingError_if_the_embedded_message_is_invalid) {
+TEST_F(AISTest, it_throws_MarnavParsingError_if_the_embedded_message_is_invalid)
+{
     pushStringToDriver(invalid_ais_strings[0]);
     pushStringToDriver(invalid_ais_strings[1]);
 
@@ -56,7 +58,8 @@ TEST_F(AISTest, it_throws_MarnavParsingError_if_the_embedded_message_is_invalid)
     ASSERT_THROW(ais.processSentence(*sentence1), MarnavParsingError);
 }
 
-TEST_F(AISTest, it_skips_sentences_that_do_not_follow_each_other) {
+TEST_F(AISTest, it_skips_sentences_that_do_not_follow_each_other)
+{
     pushStringToDriver(ais_strings[0]);
     pushStringToDriver(ais_strings[0]);
     pushStringToDriver(ais_strings[1]);
@@ -66,7 +69,8 @@ TEST_F(AISTest, it_skips_sentences_that_do_not_follow_each_other) {
     ASSERT_EQ(1, ais.getDiscardedSentenceCount());
 }
 
-TEST_F(AISTest, it_drops_a_sentence_that_do_not_start_a_multisentence_message) {
+TEST_F(AISTest, it_drops_a_sentence_that_do_not_start_a_multisentence_message)
+{
     pushStringToDriver(ais_strings[1]);
     pushStringToDriver(ais_strings[0]);
     pushStringToDriver(ais_strings[1]);
@@ -76,7 +80,8 @@ TEST_F(AISTest, it_drops_a_sentence_that_do_not_start_a_multisentence_message) {
     ASSERT_EQ(1, ais.getDiscardedSentenceCount());
 }
 
-TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
+TEST_F(AISTest, it_converts_marnav_message01_into_a_Position)
+{
     ais::message_01 msg;
     msg.set_mmsi(utils::mmsi(1234567));
     msg.set_nav_status(ais::navigation_status::at_anchor);
@@ -95,7 +100,7 @@ TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
     ASSERT_EQ(0, position.imo);
     ASSERT_EQ(ais_base::STATUS_AT_ANCHOR, position.status);
     ASSERT_TRUE(base::isUnknown(position.yaw_velocity)); // not converted
-    ASSERT_FLOAT_EQ(10, position.speed_over_ground);
+    ASSERT_FLOAT_EQ(5.14444, position.speed_over_ground);
     ASSERT_TRUE(position.high_accuracy_position);
     ASSERT_FLOAT_EQ(-15, position.course_over_ground.getDeg());
     ASSERT_FLOAT_EQ(-25, position.yaw.getDeg());
@@ -104,39 +109,42 @@ TEST_F(AISTest, it_converts_marnav_message01_into_a_Position) {
     ASSERT_EQ(1234, position.radio_status);
 }
 
-TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_lower_than_STATUS_MIN) {
+TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_lower_than_STATUS_MIN)
+{
     ais::message_01 msg;
     msg.set_nav_status(static_cast<ais::navigation_status>(ais_base::STATUS_MIN - 1));
     auto position = AIS::getPosition(msg);
     ASSERT_EQ(ais_base::STATUS_NOT_DEFINED, position.status);
 }
 
-TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_higher_than_STATUS_MAX) {
+TEST_F(AISTest, it_sets_STATUS_NOT_DEFINED_for_status_higher_than_STATUS_MAX)
+{
     ais::message_01 msg;
     msg.set_nav_status(static_cast<ais::navigation_status>(ais_base::STATUS_MAX + 1));
     auto position = AIS::getPosition(msg);
     ASSERT_EQ(ais_base::STATUS_NOT_DEFINED, position.status);
 }
 
-TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_lower_than_MANEUVER_MIN) {
+TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_lower_than_MANEUVER_MIN)
+{
     ais::message_01 msg;
     msg.set_maneuver_indicator(
-        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MIN - 1)
-    );
+        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MIN - 1));
     auto position = AIS::getPosition(msg);
     ASSERT_EQ(ais_base::MANEUVER_NOT_AVAILABLE, position.maneuver_indicator);
 }
 
-TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_higher_than_MANEUVER_MAX) {
+TEST_F(AISTest, it_sets_MANEUVER_NOT_AVAILABLE_for_status_higher_than_MANEUVER_MAX)
+{
     ais::message_01 msg;
     msg.set_maneuver_indicator(
-        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MAX + 1)
-    );
+        static_cast<ais::maneuver_indicator_id>(ais_base::MANEUVER_MAX + 1));
     auto position = AIS::getPosition(msg);
     ASSERT_EQ(ais_base::MANEUVER_NOT_AVAILABLE, position.maneuver_indicator);
 }
 
-TEST_F(AISTest, it_leaves_absent_optional_fields_as_NaN_in_Position) {
+TEST_F(AISTest, it_leaves_absent_optional_fields_as_NaN_in_Position)
+{
     ais::message_01 msg;
     auto position = AIS::getPosition(msg);
 
@@ -148,7 +156,8 @@ TEST_F(AISTest, it_leaves_absent_optional_fields_as_NaN_in_Position) {
     ASSERT_TRUE(base::isUnknown(position.speed_over_ground));
 }
 
-TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
+TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation)
+{
     ais::message_05 msg;
     msg.set_mmsi(utils::mmsi(123456));
     msg.set_imo_number(7890);
@@ -176,49 +185,56 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation) {
     ASSERT_NEAR(0.7, info.draft, 1e-2);
 }
 
-TEST_F(AISTest, it_removes_trailing_spaces_in_the_name) {
+TEST_F(AISTest, it_removes_trailing_spaces_in_the_name)
+{
     ais::message_05 msg;
     msg.set_shipname("NAME with SPACES   ");
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ("NAME with SPACES", info.name);
 }
 
-TEST_F(AISTest, it_removes_trailing_spaces_in_the_callsign) {
+TEST_F(AISTest, it_removes_trailing_spaces_in_the_callsign)
+{
     ais::message_05 msg;
     msg.set_callsign("CALL    ");
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ("CALL", info.call_sign);
 }
 
-TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_lower_than_MIN) {
+TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_lower_than_MIN)
+{
     ais::message_05 msg;
     msg.set_shiptype(static_cast<ais::ship_type>(ais_base::SHIP_TYPE_MIN - 1));
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ(ais_base::SHIP_TYPE_NOT_AVAILABLE, info.ship_type);
 }
 
-TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_higher_than_MAX) {
+TEST_F(AISTest, it_sets_SHIP_TYPE_NOT_AVAILABLE_for_ship_types_higher_than_MAX)
+{
     ais::message_05 msg;
     msg.set_shiptype(static_cast<ais::ship_type>(ais_base::SHIP_TYPE_MAX + 1));
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ(ais_base::SHIP_TYPE_NOT_AVAILABLE, info.ship_type);
 }
 
-TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_lower_than_MIN) {
+TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_lower_than_MIN)
+{
     ais::message_05 msg;
     msg.set_epfd_fix(static_cast<ais::epfd_fix_type>(ais_base::EPFD_MIN - 1));
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ(ais_base::EPFD_UNDEFINED, info.epfd_fix);
 }
 
-TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_higher_than_MAX) {
+TEST_F(AISTest, it_sets_EPFD_UNDEFINED_for_epfd_fix_higher_than_MAX)
+{
     ais::message_05 msg;
     msg.set_epfd_fix(static_cast<ais::epfd_fix_type>(ais_base::EPFD_MAX + 1));
     auto info = AIS::getVesselInformation(msg);
     ASSERT_EQ(ais_base::EPFD_UNDEFINED, info.epfd_fix);
 }
 
-TEST_F(AISTest, it_converts_marnav_message05_into_a_VoyageInformation) {
+TEST_F(AISTest, it_converts_marnav_message05_into_a_VoyageInformation)
+{
     ais::message_05 msg;
     msg.set_mmsi(utils::mmsi(123456));
     msg.set_imo_number(7890);
