@@ -1,3 +1,4 @@
+#include <base-logging/Logging.hpp>
 #include <marnav/ais/ais.hpp>
 #include <marnav/nmea/vdm.hpp>
 #include <nmea0183/AIS.hpp>
@@ -136,12 +137,14 @@ std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> vesselToWorldO
     const std::optional<base::Angle>& course_over_ground,
     double speed_over_ground)
 {
-    if (yaw.has_value()) {
+    if (yaw.has_value() && !std::isnan(yaw.value().getDeg())) {
         return {Eigen::Quaterniond(
                     Eigen::AngleAxisd(yaw.value().getRad(), Eigen::Vector3d::UnitZ())),
             ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING};
     }
-    else if (course_over_ground.has_value() && speed_over_ground >= MIN_SPEED_THRESHOLD) {
+    else if (course_over_ground.has_value() &&
+             !std::isnan(course_over_ground.value().getDeg()) &&
+             speed_over_ground >= MIN_SPEED_THRESHOLD) {
         return {Eigen::Quaterniond(Eigen::AngleAxisd(course_over_ground.value().getRad(),
                     Eigen::Vector3d::UnitZ())),
             ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE};
@@ -195,11 +198,27 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
     base::Vector3d const& vessel_reference_position,
     gps_base::UTMConverter utm_converter)
 {
-    ais_base::Position corrected_position;
+    if (std::isnan(position.yaw.getDeg()) &&
+        std::isnan(position.course_over_ground.getDeg())) {
+        constexpr char error_msg[] = "Position can't be corrected because both 'yaw' "
+                                     "and 'course_over_ground' values are missing.";
+        LOG_ERROR_S << error_msg << std::endl;
+        throw std::runtime_error(error_msg);
+        return position;
+    }
 
     auto [vessel2world_ori, status] = vesselToWorldOrientation(position.yaw,
         position.course_over_ground,
         position.speed_over_ground);
+
+    if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
+        constexpr char error_msg[] =
+            "Position can't be corrected because 'yaw' value is missing and "
+            "'speed_over_ground' is below the threshold.";
+        LOG_ERROR_S << error_msg << std::endl;
+        throw std::runtime_error(error_msg);
+        return position;
+    }
 
     auto sensor2vessel_in_world_pos =
         sensorToVesselInWorldPose(vessel_reference_position, vessel2world_ori);
@@ -209,6 +228,7 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
             sensor2vessel_in_world_pos,
             utm_converter);
 
+    ais_base::Position corrected_position;
     corrected_position.latitude = latitude;
     corrected_position.longitude = longitude;
     corrected_position.correction_status = status;
