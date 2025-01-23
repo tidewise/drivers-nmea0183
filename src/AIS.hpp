@@ -10,6 +10,11 @@
 #include <marnav/ais/message_01.hpp>
 #include <marnav/ais/message_05.hpp>
 
+#include <base/samples/RigidBodyState.hpp>
+#include <gps_base/BaseTypes.hpp>
+#include <gps_base/UTMConverter.hpp>
+#include <optional>
+
 namespace nmea0183 {
     class AIS {
         uint32_t mDiscardedSentenceCount = 0;
@@ -43,6 +48,23 @@ namespace nmea0183 {
          * of some reordering/reassembly issues
          */
         uint32_t getDiscardedSentenceCount() const;
+
+        /**
+         * Applies position correction using the vessel reference position and the sensor
+         * offset
+         *
+         * @param position the AIS position to be corrected
+         * @param vessel_reference_position The position of the vessel’s reference point
+         * relative to the sensor
+         * @param utm_converter The UTM converter
+         *
+         * @return The corrected AIS position with updated latitude, longitude, and
+         * correction status
+         */
+        static ais_base::Position applyPositionCorrection(
+            ais_base::Position const& position,
+            base::Vector3d const& vessel_reference_position,
+            gps_base::UTMConverter utm_converter);
 
         static ais_base::Position getPosition(marnav::ais::message_01 const& message);
         static ais_base::VesselInformation getVesselInformation(
