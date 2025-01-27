@@ -168,13 +168,21 @@ base::samples::RigidBodyState convertGPSToUTM(
     const std::optional<ais_base::Position>& position,
     gps_base::UTMConverter utm_converter)
 {
+    if (!position.has_value()) {
+        std::string error_msg = "Position data is unavailable";
+        LOG_ERROR_S << error_msg;
+        throw std::invalid_argument(error_msg);
+    }
+
+    auto position_value = position.value();
     gps_base::Solution sensor2world_solution;
-    sensor2world_solution.latitude = position.value().latitude.getDeg();
-    sensor2world_solution.longitude = position.value().longitude.getDeg();
+    sensor2world_solution.latitude = position_value.latitude.getDeg();
+    sensor2world_solution.longitude = position_value.longitude.getDeg();
 
     base::samples::RigidBodyState sensor2world_UTM;
     sensor2world_UTM.position =
         utm_converter.convertToUTM(sensor2world_solution).position;
+    sensor2world_UTM.time = base::Time::now();
 
     return sensor2world_UTM;
 }
@@ -198,12 +206,11 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
     base::Vector3d const& vessel_reference_position,
     gps_base::UTMConverter utm_converter)
 {
-    if (std::isnan(position.yaw.getDeg()) &&
-        std::isnan(position.course_over_ground.getDeg())) {
-        constexpr char error_msg[] = "Position can't be corrected because both 'yaw' "
-                                     "and 'course_over_ground' values are missing.";
+    if (std::isnan(position.yaw.getRad()) &&
+        std::isnan(position.course_over_ground.getRad())) {
+        std::string error_msg = "Position can't be corrected because both 'yaw' "
+                                "and 'course_over_ground' values are missing.";
         LOG_ERROR_S << error_msg << std::endl;
-        throw std::runtime_error(error_msg);
         return position;
     }
 
@@ -212,11 +219,10 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
         position.speed_over_ground);
 
     if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
-        constexpr char error_msg[] =
+        std::string error_msg =
             "Position can't be corrected because 'yaw' value is missing and "
             "'speed_over_ground' is below the threshold.";
         LOG_ERROR_S << error_msg << std::endl;
-        throw std::runtime_error(error_msg);
         return position;
     }
 

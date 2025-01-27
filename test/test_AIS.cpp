@@ -318,14 +318,10 @@ TEST_F(AISTest, it_does_no_correction_if_both_yaw_and_cog_are_missing)
     base::Vector3d vessel_reference_position(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    try {
+    ais_base::Position corrected_position =
         AIS::applyPositionCorrection(position, vessel_reference_position, utm_converter);
-    }
-    catch (const std::runtime_error& e) {
-        ASSERT_STREQ(e.what(),
-            "Position can't be corrected because both 'yaw' "
-            "and 'course_over_ground' values are missing.");
-    }
+    ASSERT_EQ(corrected_position.correction_status,
+        ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 
 TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_threshold)
@@ -340,12 +336,21 @@ TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_thresho
     base::Vector3d vessel_reference_position(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    try {
+    ais_base::Position corrected_position =
         AIS::applyPositionCorrection(position, vessel_reference_position, utm_converter);
+    ASSERT_EQ(corrected_position.correction_status,
+        ais_base::PositionCorrectionStatus::POSITION_RAW);
+}
+
+TEST_F(AISTest, it_throws_runtime_error_if_position_has_no_value)
+{
+    base::Vector3d vessel_reference_position(100.0, 50.0, 0.0);
+    gps_base::UTMConverter utm_converter = createUTMConverter();
+
+    try {
+        AIS::applyPositionCorrection({}, vessel_reference_position, utm_converter);
     }
     catch (const std::runtime_error& e) {
-        ASSERT_STREQ(e.what(),
-            "Position can't be corrected because 'yaw' value is missing and "
-            "'speed_over_ground' is below the threshold.");
+        ASSERT_STREQ(e.what(), "Position data is unavailable.");
     }
 }
