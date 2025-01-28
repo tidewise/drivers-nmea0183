@@ -137,13 +137,13 @@ std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> vesselToWorldO
     const std::optional<base::Angle>& course_over_ground,
     double speed_over_ground)
 {
-    if (yaw.has_value() && !std::isnan(yaw.value().getDeg())) {
+    if (yaw.has_value() && !std::isnan(yaw.value().getRad())) {
         return {Eigen::Quaterniond(
                     Eigen::AngleAxisd(yaw.value().getRad(), Eigen::Vector3d::UnitZ())),
             ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING};
     }
     else if (course_over_ground.has_value() &&
-             !std::isnan(course_over_ground.value().getDeg()) &&
+             !std::isnan(course_over_ground.value().getRad()) &&
              speed_over_ground >= MIN_SPEED_THRESHOLD) {
         return {Eigen::Quaterniond(Eigen::AngleAxisd(course_over_ground.value().getRad(),
                     Eigen::Vector3d::UnitZ())),
@@ -208,9 +208,9 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
 {
     if (std::isnan(position.yaw.getRad()) &&
         std::isnan(position.course_over_ground.getRad())) {
-        std::string error_msg = "Position can't be corrected because both 'yaw' "
-                                "and 'course_over_ground' values are missing.";
-        LOG_ERROR_S << error_msg << std::endl;
+        LOG_ERROR_S << "Position can't be corrected because both 'yaw' "
+                       "and 'course_over_ground' values are missing."
+                    << std::endl;
         return position;
     }
 
@@ -219,10 +219,9 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
         position.speed_over_ground);
 
     if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
-        std::string error_msg =
-            "Position can't be corrected because 'yaw' value is missing and "
-            "'speed_over_ground' is below the threshold.";
-        LOG_ERROR_S << error_msg << std::endl;
+        LOG_ERROR_S << "Position can't be corrected because 'yaw' value is missing and "
+                       "'speed_over_ground' is below the threshold."
+                    << std::endl;
         return position;
     }
 
