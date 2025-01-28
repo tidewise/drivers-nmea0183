@@ -28,7 +28,7 @@ struct AISTest : public ::testing::Test, public iodrivers_base::Fixture<Driver> 
 
     gps_base::UTMConverter createUTMConverter()
     {
-        gps_base::UTMConversionParameters parameters = {Eigen::Vector3d(0, 0, 0),
+        gps_base::UTMConversionParameters parameters = {Eigen::Vector3d(1, 1, 0),
             11,
             true};
         gps_base::UTMConverter converter(parameters);
@@ -190,7 +190,7 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VesselInformation)
     ASSERT_EQ(ais_base::SHIP_TYPE_CARGO, info.ship_type);
     ASSERT_EQ(15, info.length);
     ASSERT_EQ(6, info.width);
-    ASSERT_EQ(base::Vector3d(10, 4, 0), info.reference_position);
+    ASSERT_EQ(base::Vector3d(2.5, 1, 0), info.reference_position);
     ASSERT_EQ(ais_base::EPFD_COMBINED_GPS_GLONASS, info.epfd_fix);
     ASSERT_NEAR(0.7, info.draft, 1e-2);
 }

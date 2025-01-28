@@ -110,13 +110,19 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     string call_sign = message.get_callsign();
     first_not_space = call_sign.find_last_not_of(" ");
     info.call_sign = call_sign.substr(0, first_not_space + 1);
-    info.length = message.get_to_bow() + message.get_to_stern();
-    info.width = message.get_to_port() + message.get_to_starboard();
+    auto get_to_stern = message.get_to_stern();
+    auto get_to_starboard = message.get_to_starboard();
+    float length = message.get_to_bow() + get_to_stern;
+    float width = message.get_to_port() + get_to_starboard;
+    info.length = length;
+    info.width = width;
     info.draft = static_cast<float>(message.get_draught()) / 10;
     info.ship_type = static_cast<ais_base::ShipType>(message.get_shiptype());
     info.epfd_fix = static_cast<ais_base::EPFDFixType>(message.get_epfd_fix());
     info.reference_position =
-        Eigen::Vector3d(message.get_to_stern(), message.get_to_starboard(), 0);
+        Eigen::Vector3d(static_cast<double>(get_to_stern - length / 2.0),
+            static_cast<double>(get_to_starboard - width / 2.0),
+            0);
 
     info.ensureEnumsValid();
     return info;
