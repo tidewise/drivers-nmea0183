@@ -354,7 +354,7 @@ TEST_F(AISTest, it_throws_runtime_error_if_position_has_no_value)
     try {
         AIS::applyPositionCorrection({}, sensor2vessel_in_vessel_pos, utm_converter);
     }
-    catch (const std::runtime_error& e) {
+    catch (std::invalid_argument const& e) {
         ASSERT_STREQ(e.what(), "Position data is unavailable.");
     }
 }

@@ -62,9 +62,9 @@ namespace nmea0183 {
          * correction status
          */
         static ais_base::Position applyPositionCorrection(
-            ais_base::Position const& position,
+            std::optional<ais_base::Position> position,
             base::Vector3d const& sensor2vessel_in_vessel_pos,
-            gps_base::UTMConverter utm_converter);
+            gps_base::UTMConverter const& utm_converter);
 
         static ais_base::Position getPosition(marnav::ais::message_01 const& message);
         static ais_base::VesselInformation getVesselInformation(
