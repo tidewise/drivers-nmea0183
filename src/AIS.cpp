@@ -119,10 +119,9 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     info.draft = static_cast<float>(message.get_draught()) / 10;
     info.ship_type = static_cast<ais_base::ShipType>(message.get_shiptype());
     info.epfd_fix = static_cast<ais_base::EPFDFixType>(message.get_epfd_fix());
-    info.reference_position =
-        Eigen::Vector3d(static_cast<double>(get_to_stern - length / 2.0),
-            static_cast<double>(get_to_starboard - width / 2.0),
-            0);
+    info.reference_position = Eigen::Vector3d(get_to_stern - (length / 2.0),
+        get_to_starboard - (width / 2.0),
+        0);
 
     info.ensureEnumsValid();
     return info;
