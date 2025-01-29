@@ -225,7 +225,7 @@ ais_base::Position AIS::applyPositionCorrection(
         position_value.speed_over_ground);
 
     if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
-        LOG_ERROR_S << "Position can't be corrected because 'yaw' value is missing and "
+        LOG_DEBUG_S << "Position can't be corrected because 'yaw' value is missing and "
                        "'speed_over_ground' is below the threshold."
                     << std::endl;
         return position_value;
