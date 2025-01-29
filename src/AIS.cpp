@@ -9,7 +9,7 @@ using namespace marnav;
 using namespace nmea0183;
 
 double constexpr KNOTS_TO_MS = 0.514444;
-double constexpr MIN_SPEED_THRESHOLD = 0.2;
+double constexpr MIN_SPEED_FOR_VALID_COURSE = 0.2;
 
 AIS::AIS(Driver& driver)
     : mDriver(driver)
@@ -150,7 +150,7 @@ std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> vesselToWorldO
     }
     else if (course_over_ground.has_value() &&
              !std::isnan(course_over_ground.value().getRad()) &&
-             speed_over_ground >= MIN_SPEED_THRESHOLD) {
+             speed_over_ground >= MIN_SPEED_FOR_VALID_COURSE) {
         return {Eigen::Quaterniond(Eigen::AngleAxisd(course_over_ground.value().getRad(),
                     Eigen::Vector3d::UnitZ())),
             ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE};
