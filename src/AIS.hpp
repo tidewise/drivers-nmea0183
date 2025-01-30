@@ -54,7 +54,7 @@ namespace nmea0183 {
          * offset
          *
          * @param position the AIS position to be corrected
-         * @param sensor2vessel_in_vessel_pos The position of the sensor relative to the
+         * @param sensor2vessel_pos The position of the sensor relative to the
          * vessel
          * @param utm_converter The UTM converter
          *
@@ -63,7 +63,7 @@ namespace nmea0183 {
          */
         static ais_base::Position applyPositionCorrection(
             std::optional<ais_base::Position> position,
-            base::Vector3d const& sensor2vessel_in_vessel_pos,
+            base::Vector3d const& sensor2vessel_pos,
             gps_base::UTMConverter const& utm_converter);
 
         static ais_base::Position getPosition(marnav::ais::message_01 const& message);

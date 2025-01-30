@@ -159,12 +159,11 @@ std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> vesselToWorldO
     }
 }
 
-base::Vector3d sensorToVesselInWorldPose(
-    base::Vector3d const& sensor2vessel_in_vessel_pos,
+base::Vector3d sensorToVesselInWorldPose(base::Vector3d const& sensor2vessel_pos,
     Eigen::Quaterniond const& vessel2world_ori)
 {
     base::Vector3d sensor2vessel_in_world_pos;
-    sensor2vessel_in_world_pos = vessel2world_ori * sensor2vessel_in_vessel_pos;
+    sensor2vessel_in_world_pos = vessel2world_ori * sensor2vessel_pos;
 
     return sensor2vessel_in_world_pos;
 }
@@ -201,7 +200,7 @@ std::pair<base::Angle, base::Angle> convertUTMToGPSInWorldFrame(
 
 ais_base::Position AIS::applyPositionCorrection(
     std::optional<ais_base::Position> position,
-    base::Vector3d const& sensor2vessel_in_vessel_pos,
+    base::Vector3d const& sensor2vessel_pos,
     gps_base::UTMConverter const& utm_converter)
 {
     if (!position.has_value()) {
@@ -232,7 +231,7 @@ ais_base::Position AIS::applyPositionCorrection(
     }
 
     auto sensor2vessel_in_world_pos =
-        sensorToVesselInWorldPose(sensor2vessel_in_vessel_pos, vessel2world_ori);
+        sensorToVesselInWorldPose(sensor2vessel_pos, vessel2world_ori);
 
     auto [latitude, longitude] =
         convertUTMToGPSInWorldFrame(convertGPSToUTM(position_value, utm_converter),

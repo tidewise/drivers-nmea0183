@@ -274,12 +274,11 @@ TEST_F(AISTest, it_corrects_position_using_yaw)
     msg.set_hdg(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_in_vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    ais_base::Position corrected_position = AIS::applyPositionCorrection(position,
-        sensor2vessel_in_vessel_pos,
-        utm_converter);
+    ais_base::Position corrected_position =
+        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
 
     ASSERT_NEAR(corrected_position.latitude.getDeg(), 44.9991, 1e-4);
     ASSERT_NEAR(corrected_position.longitude.getDeg(), -119.9993, 1e-4);
@@ -296,12 +295,11 @@ TEST_F(AISTest, it_corrects_position_using_cog)
     msg.set_cog(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_in_vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    ais_base::Position corrected_position = AIS::applyPositionCorrection(position,
-        sensor2vessel_in_vessel_pos,
-        utm_converter);
+    ais_base::Position corrected_position =
+        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
 
     ASSERT_NEAR(corrected_position.latitude.getDeg(), 44.9991, 1e-4);
     ASSERT_NEAR(corrected_position.longitude.getDeg(), -119.9993, 1e-4);
@@ -317,12 +315,11 @@ TEST_F(AISTest, it_does_no_correction_if_both_yaw_and_cog_are_missing)
     msg.set_sog(0);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_in_vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    ais_base::Position corrected_position = AIS::applyPositionCorrection(position,
-        sensor2vessel_in_vessel_pos,
-        utm_converter);
+    ais_base::Position corrected_position =
+        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
     ASSERT_EQ(corrected_position.correction_status,
         ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
@@ -336,23 +333,22 @@ TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_thresho
     msg.set_cog(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_in_vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    ais_base::Position corrected_position = AIS::applyPositionCorrection(position,
-        sensor2vessel_in_vessel_pos,
-        utm_converter);
+    ais_base::Position corrected_position =
+        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
     ASSERT_EQ(corrected_position.correction_status,
         ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 
 TEST_F(AISTest, it_throws_runtime_error_if_position_has_no_value)
 {
-    base::Vector3d sensor2vessel_in_vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
     try {
-        AIS::applyPositionCorrection({}, sensor2vessel_in_vessel_pos, utm_converter);
+        AIS::applyPositionCorrection({}, sensor2vessel_pos, utm_converter);
     }
     catch (std::invalid_argument const& e) {
         ASSERT_STREQ(e.what(), "Position data is unavailable.");
