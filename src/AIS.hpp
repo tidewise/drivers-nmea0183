@@ -53,18 +53,38 @@ namespace nmea0183 {
          * Applies position correction using the vessel reference position and the sensor
          * offset
          *
-         * @param position the AIS position to be corrected
+         * @param position The vessel position to be corrected
          * @param sensor2vessel_pos The position of the sensor relative to the
          * vessel
          * @param utm_converter The UTM converter
          *
-         * @return The corrected AIS position with updated latitude, longitude, and
+         * @return The corrected vessel position with updated latitude, longitude, and
          * correction status
          */
         static ais_base::Position applyPositionCorrection(
-            std::optional<ais_base::Position> position,
+            ais_base::Position const& position,
             base::Vector3d const& sensor2vessel_pos,
             gps_base::UTMConverter const& utm_converter);
+
+        /**
+         * @brief Selects the vessel's orientation in the world frame based on available
+         * heading or course information
+         * - Uses yaw if available
+         * - Uses course over ground if yaw is not available and the speed over ground is
+         * above the minimum threshold
+         * - Uses Identity otherwise
+         *
+         * @param yaw The vessel's yaw (heading) angle
+         * @param course_over_ground The vessel's course over ground angle
+         * @param speed_over_ground The vessel's speed over ground
+         *
+         * @return A pair containing the vessel's orientation and the position correction
+         * status
+         */
+        static std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus>
+        selectVesselHeadingSource(base::Angle const& yaw,
+            base::Angle const& course_over_ground,
+            double speed_over_ground);
 
         static ais_base::Position getPosition(marnav::ais::message_01 const& message);
         static ais_base::VesselInformation getVesselInformation(
