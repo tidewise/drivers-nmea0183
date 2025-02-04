@@ -265,66 +265,72 @@ TEST_F(AISTest, it_converts_marnav_message05_into_a_VoyageInformation)
     ASSERT_EQ("DEST", info.destination);
 }
 
-TEST_F(AISTest, it_corrects_position_using_yaw)
+TEST_F(AISTest, it_selects_yaw_as_vessel_heading_source_if_available)
 {
     ais::message_01 msg;
-    msg.set_latitude(geo::latitude(45));
-    msg.set_longitude(geo::longitude(-120));
     msg.set_sog(0);
     msg.set_hdg(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
-    gps_base::UTMConverter utm_converter = createUTMConverter();
+    auto [ori, status] = AIS::selectVesselHeadingSource(position.yaw,
+        position.course_over_ground,
+        position.speed_over_ground);
 
-    ais_base::Position corrected_position =
-        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
-
-    ASSERT_NEAR(corrected_position.latitude.getDeg(), 44.9991, 1e-4);
-    ASSERT_NEAR(corrected_position.longitude.getDeg(), -119.9993, 1e-4);
-    ASSERT_EQ(corrected_position.correction_status,
+    ASSERT_NEAR(ori.z(), -0.7071068, 1e-3);
+    ASSERT_NEAR(ori.w(), 0.7071068, 1e-3);
+    ASSERT_EQ(status,
         ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING);
 }
 
-TEST_F(AISTest, it_corrects_position_using_cog)
+TEST_F(AISTest,
+    it_selects_cog_as_vessel_heading_source_if_no_yaw_and_sog_is_above_threshold_for_cog)
 {
     ais::message_01 msg;
-    msg.set_latitude(geo::latitude(45));
-    msg.set_longitude(geo::longitude(-120));
     msg.set_sog(0.5);
     msg.set_cog(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
-    gps_base::UTMConverter utm_converter = createUTMConverter();
+    auto [ori, status] = AIS::selectVesselHeadingSource(position.yaw,
+        position.course_over_ground,
+        position.speed_over_ground);
 
-    ais_base::Position corrected_position =
-        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
-
-    ASSERT_NEAR(corrected_position.latitude.getDeg(), 44.9991, 1e-4);
-    ASSERT_NEAR(corrected_position.longitude.getDeg(), -119.9993, 1e-4);
-    ASSERT_EQ(corrected_position.correction_status,
-        ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
+    ASSERT_NEAR(ori.z(), -0.7071068, 1e-3);
+    ASSERT_NEAR(ori.w(), 0.7071068, 1e-3);
+    ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
 }
 
-TEST_F(AISTest, it_does_no_correction_if_both_yaw_and_cog_are_missing)
+TEST_F(AISTest,
+    it_selects_identity_as_vessel_heading_source_if_no_yaw_and_sog_is_below_threshold_for_cog)
 {
     ais::message_01 msg;
-    msg.set_latitude(geo::latitude(45));
-    msg.set_longitude(geo::longitude(-120));
-    msg.set_sog(0);
+    msg.set_sog(0.1);
+    msg.set_cog(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
-    gps_base::UTMConverter utm_converter = createUTMConverter();
+    auto [ori, status] = AIS::selectVesselHeadingSource(position.yaw,
+        position.course_over_ground,
+        position.speed_over_ground);
 
-    ais_base::Position corrected_position =
-        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
-    ASSERT_EQ(corrected_position.correction_status,
-        ais_base::PositionCorrectionStatus::POSITION_RAW);
+    ASSERT_EQ(ori.z(), 0);
+    ASSERT_EQ(ori.w(), 1);
+    ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 
-TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_threshold)
+TEST_F(AISTest, it_selects_identity_as_vessel_heading_source_if_no_yaw_or_cog)
+{
+    ais::message_01 msg;
+    auto position = AIS::getPosition(msg);
+
+    auto [ori, status] = AIS::selectVesselHeadingSource(position.yaw,
+        position.course_over_ground,
+        position.speed_over_ground);
+
+    ASSERT_EQ(ori.z(), 0);
+    ASSERT_EQ(ori.w(), 1);
+    ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_RAW);
+}
+
+TEST_F(AISTest, it_does_no_correction_if_no_yaw_and_sog_is_below_threshold_for_cog)
 {
     ais::message_01 msg;
     msg.set_latitude(geo::latitude(45));
@@ -333,7 +339,7 @@ TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_thresho
     msg.set_cog(90);
     auto position = AIS::getPosition(msg);
 
-    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
+    base::Vector3d sensor2vessel_pos(-100.0, -50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
     ais_base::Position corrected_position =
@@ -342,15 +348,81 @@ TEST_F(AISTest, it_does_no_correction_if_yaw_is_missing_and_sog_is_below_thresho
         ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 
-TEST_F(AISTest, it_throws_runtime_error_if_position_has_no_value)
+TEST_F(AISTest, it_does_no_correction_if_no_yaw_or_cog)
 {
-    base::Vector3d sensor2vessel_pos(100.0, 50.0, 0.0);
+    ais::message_01 msg;
+    msg.set_latitude(geo::latitude(45));
+    msg.set_longitude(geo::longitude(-120));
+    auto position = AIS::getPosition(msg);
+
+    base::Vector3d sensor2vessel_pos(-100.0, -50.0, 0.0);
     gps_base::UTMConverter utm_converter = createUTMConverter();
 
-    try {
-        AIS::applyPositionCorrection({}, sensor2vessel_pos, utm_converter);
-    }
-    catch (std::invalid_argument const& e) {
-        ASSERT_STREQ(e.what(), "Position data is unavailable.");
-    }
+    ais_base::Position corrected_position =
+        AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
+    ASSERT_EQ(corrected_position.correction_status,
+        ais_base::PositionCorrectionStatus::POSITION_RAW);
+}
+
+TEST_F(AISTest, it_corrects_position_using_yaw)
+{
+    auto utm_converter = createUTMConverter();
+    base::samples::RigidBodyState vessel2world, sensor2world;
+    vessel2world.position = base::Vector3d(10, 10, 0);
+    sensor2world.position = base::Vector3d(9, 11, 0);
+    auto sensor2world_gps = utm_converter.convertUTMToGPS(sensor2world);
+
+    ais::message_01 msg_position;
+    msg_position.set_latitude(geo::latitude(sensor2world_gps.latitude));
+    msg_position.set_longitude(geo::longitude(sensor2world_gps.longitude));
+    msg_position.set_hdg(90);
+    auto position = AIS::getPosition(msg_position);
+
+    ais::message_05 msg_info;
+    msg_info.set_to_port(9);
+    msg_info.set_to_starboard(11);
+    msg_info.set_to_bow(21);
+    msg_info.set_to_stern(19);
+    auto info = AIS::getVesselInformation(msg_info);
+
+    auto corrected_position =
+        AIS::applyPositionCorrection(position, info.reference_position, utm_converter);
+
+    auto vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
+    ASSERT_NEAR(vessel2world_gps.latitude, corrected_position.latitude.getDeg(), 1e-3);
+    ASSERT_NEAR(vessel2world_gps.longitude, corrected_position.longitude.getDeg(), 1e-3);
+    ASSERT_EQ(corrected_position.correction_status,
+        ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING);
+}
+
+TEST_F(AISTest, it_corrects_position_using_cog)
+{
+    auto utm_converter = createUTMConverter();
+    base::samples::RigidBodyState vessel2world, sensor2world;
+    vessel2world.position = base::Vector3d(10, 10, 0);
+    sensor2world.position = base::Vector3d(9, 11, 0);
+    auto sensor2world_gps = utm_converter.convertUTMToGPS(sensor2world);
+
+    ais::message_01 msg_position;
+    msg_position.set_latitude(geo::latitude(sensor2world_gps.latitude));
+    msg_position.set_longitude(geo::longitude(sensor2world_gps.longitude));
+    msg_position.set_sog(0.5);
+    msg_position.set_cog(90);
+    auto position = AIS::getPosition(msg_position);
+
+    ais::message_05 msg_info;
+    msg_info.set_to_port(9);
+    msg_info.set_to_starboard(11);
+    msg_info.set_to_bow(21);
+    msg_info.set_to_stern(19);
+    auto info = AIS::getVesselInformation(msg_info);
+
+    auto corrected_position =
+        AIS::applyPositionCorrection(position, info.reference_position, utm_converter);
+
+    auto vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
+    ASSERT_NEAR(vessel2world_gps.latitude, corrected_position.latitude.getDeg(), 1e-3);
+    ASSERT_NEAR(vessel2world_gps.longitude, corrected_position.longitude.getDeg(), 1e-3);
+    ASSERT_EQ(corrected_position.correction_status,
+        ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
 }
