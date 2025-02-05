@@ -159,7 +159,7 @@ std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> AIS::
     }
 }
 
-base::Vector3d convertPositionInGPSToUTM(ais_base::Position const& position,
+base::Vector3d convertGPSToUTM(ais_base::Position const& position,
     gps_base::UTMConverter const& utm_converter)
 {
     gps_base::Solution sensor2world_solution;
@@ -171,20 +171,23 @@ base::Vector3d convertPositionInGPSToUTM(ais_base::Position const& position,
     return sensor2world.position;
 }
 
-base::Vector3d getVesselPositionInWorldFrame(base::Vector3d const& sensor2vessel_pos,
-    Eigen::Quaterniond const& vessel2world_ori)
+base::Vector3d computeVesselPositionInWorldFrame(
+    base::Vector3d const& sensor2vessel_pos,
+    Eigen::Quaterniond const& vessel2world_ori,
+    base::Vector3d const& sensor2world_pos)
 {
-    return -(vessel2world_ori * sensor2vessel_pos);
+    const auto sensor2world_ori = vessel2world_ori;
+    base::samples::RigidBodyState vessel2world;
+    vessel2world.position = sensor2world_pos - (sensor2world_ori * sensor2vessel_pos);
+    return vessel2world.position;
 }
 
-std::pair<base::Angle, base::Angle> convertUTMToGPSInWorldFrame(
-    base::Vector3d const& sensor2world_pos,
-    base::Vector3d const& vessel2sensor_in_world_pos,
+std::pair<base::Angle, base::Angle> convertUTMToGPS(
+    base::Vector3d const& vessel2world_pos,
     gps_base::UTMConverter const& utm_converter)
 {
     base::samples::RigidBodyState vessel2world;
-    vessel2world.position = sensor2world_pos + vessel2sensor_in_world_pos;
-
+    vessel2world.position = vessel2world_pos;
     gps_base::Solution vessel2world_gps;
     vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
 
@@ -192,44 +195,42 @@ std::pair<base::Angle, base::Angle> convertUTMToGPSInWorldFrame(
         base::Angle::fromDeg(vessel2world_gps.longitude)};
 }
 
-ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& position,
+ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor_pos,
     base::Vector3d const& sensor2vessel_pos,
     gps_base::UTMConverter const& utm_converter)
 {
-    auto sensor2world_gps = position;
-
-    if (std::isnan(sensor2world_gps.yaw.getRad()) &&
-        std::isnan(sensor2world_gps.course_over_ground.getRad())) {
+    if (std::isnan(sensor_pos.yaw.getRad()) &&
+        std::isnan(sensor_pos.course_over_ground.getRad())) {
         LOG_DEBUG_S << "Position can't be corrected because both 'yaw' "
                        "and 'course_over_ground' values are missing."
                     << std::endl;
-        return sensor2world_gps;
+        return sensor_pos;
     }
 
-    auto [vessel2world_ori, status] = selectVesselHeadingSource(sensor2world_gps.yaw,
-        sensor2world_gps.course_over_ground,
-        sensor2world_gps.speed_over_ground);
+    auto [vessel2world_ori, status] = selectVesselHeadingSource(sensor_pos.yaw,
+        sensor_pos.course_over_ground,
+        sensor_pos.speed_over_ground);
 
+    auto vessel_pos = sensor_pos;
     if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
         LOG_DEBUG_S << "Position can't be corrected because 'yaw' value is missing and "
                        "'speed_over_ground' is below the threshold."
                     << std::endl;
-        sensor2world_gps.correction_status = status;
-        return sensor2world_gps;
+        vessel_pos.correction_status = status;
+        return vessel_pos;
     }
 
-    auto sensor2world_pos = convertPositionInGPSToUTM(sensor2world_gps, utm_converter);
+    auto sensor2world_pos = convertGPSToUTM(sensor_pos, utm_converter);
 
-    auto vessel2sensor_in_world_pos =
-        getVesselPositionInWorldFrame(sensor2vessel_pos, vessel2world_ori);
+    auto vessel2world_pos = computeVesselPositionInWorldFrame(sensor2vessel_pos,
+        vessel2world_ori,
+        sensor2world_pos);
 
-    auto [latitude, longitude] = convertUTMToGPSInWorldFrame(sensor2world_pos,
-        vessel2sensor_in_world_pos,
-        utm_converter);
+    auto [latitude, longitude] = convertUTMToGPS(vessel2world_pos, utm_converter);
 
-    sensor2world_gps.latitude = latitude;
-    sensor2world_gps.longitude = longitude;
-    sensor2world_gps.correction_status = status;
+    vessel_pos.latitude = latitude;
+    vessel_pos.longitude = longitude;
+    vessel_pos.correction_status = status;
 
-    return sensor2world_gps;
+    return vessel_pos;
 }
