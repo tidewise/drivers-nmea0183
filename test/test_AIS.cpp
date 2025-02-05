@@ -346,6 +346,7 @@ TEST_F(AISTest, it_does_no_correction_if_no_yaw_and_sog_is_below_threshold_for_c
         AIS::applyPositionCorrection(position, sensor2vessel_pos, utm_converter);
     ASSERT_EQ(corrected_position.correction_status,
         ais_base::PositionCorrectionStatus::POSITION_RAW);
+    ASSERT_EQ(position.time, corrected_position.time);
 }
 
 TEST_F(AISTest, it_does_no_correction_if_no_yaw_or_cog)
@@ -388,11 +389,12 @@ TEST_F(AISTest, it_corrects_position_using_yaw)
     auto corrected_position =
         AIS::applyPositionCorrection(position, info.reference_position, utm_converter);
 
-    auto vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
-    ASSERT_NEAR(vessel2world_gps.latitude, corrected_position.latitude.getDeg(), 1e-3);
-    ASSERT_NEAR(vessel2world_gps.longitude, corrected_position.longitude.getDeg(), 1e-3);
+    auto vessel_pos = utm_converter.convertUTMToGPS(vessel2world);
+    ASSERT_NEAR(vessel_pos.latitude, corrected_position.latitude.getDeg(), 1e-3);
+    ASSERT_NEAR(vessel_pos.longitude, corrected_position.longitude.getDeg(), 1e-3);
     ASSERT_EQ(corrected_position.correction_status,
         ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING);
+    ASSERT_EQ(position.time, corrected_position.time);
 }
 
 TEST_F(AISTest, it_corrects_position_using_cog)
@@ -420,9 +422,10 @@ TEST_F(AISTest, it_corrects_position_using_cog)
     auto corrected_position =
         AIS::applyPositionCorrection(position, info.reference_position, utm_converter);
 
-    auto vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
-    ASSERT_NEAR(vessel2world_gps.latitude, corrected_position.latitude.getDeg(), 1e-3);
-    ASSERT_NEAR(vessel2world_gps.longitude, corrected_position.longitude.getDeg(), 1e-3);
+    auto vessel_pos = utm_converter.convertUTMToGPS(vessel2world);
+    ASSERT_NEAR(vessel_pos.latitude, corrected_position.latitude.getDeg(), 1e-3);
+    ASSERT_NEAR(vessel_pos.longitude, corrected_position.longitude.getDeg(), 1e-3);
     ASSERT_EQ(corrected_position.correction_status,
         ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
+    ASSERT_EQ(position.time, corrected_position.time);
 }
