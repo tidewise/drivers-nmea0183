@@ -214,6 +214,7 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& positi
         LOG_DEBUG_S << "Position can't be corrected because 'yaw' value is missing and "
                        "'speed_over_ground' is below the threshold."
                     << std::endl;
+        sensor2world_gps.correction_status = status;
         return sensor2world_gps;
     }
 
