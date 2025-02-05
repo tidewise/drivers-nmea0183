@@ -17,8 +17,8 @@
 
 namespace nmea0183 {
     class AIS {
-        uint32_t mDiscardedSentenceCount = 0;
-        Driver& mDriver;
+        uint32_t m_discarded_sentence_count = 0;
+        Driver& m_driver;
         std::vector<std::pair<std::string, std::uint32_t>> payloads;
 
     public:

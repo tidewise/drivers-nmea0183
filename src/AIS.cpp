@@ -12,14 +12,14 @@ double constexpr KNOTS_TO_MS = 0.514444;
 double constexpr MIN_SPEED_FOR_VALID_COURSE = 0.2;
 
 AIS::AIS(Driver& driver)
-    : mDriver(driver)
+    : m_driver(driver)
 {
 }
 
 unique_ptr<ais::message> AIS::readMessage()
 {
     while (true) {
-        auto sentence = mDriver.readSentence();
+        auto sentence = m_driver.readSentence();
         auto msg = processSentence(*sentence);
         if (msg) {
             return msg;
@@ -29,7 +29,7 @@ unique_ptr<ais::message> AIS::readMessage()
 
 uint32_t AIS::getDiscardedSentenceCount() const
 {
-    return mDiscardedSentenceCount;
+    return m_discarded_sentence_count;
 }
 
 unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence)
@@ -43,12 +43,12 @@ unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence)
     size_t n_fragments = vdm->get_n_fragments();
     size_t fragment = vdm->get_fragment();
     if (fragment != payloads.size() + 1) {
-        mDiscardedSentenceCount += payloads.size();
+        m_discarded_sentence_count += payloads.size();
         payloads.clear();
 
         // Go on if we're receiving the first fragment of a new message
         if (fragment != 1) {
-            mDiscardedSentenceCount++;
+            m_discarded_sentence_count++;
             return unique_ptr<ais::message>();
         }
     }
