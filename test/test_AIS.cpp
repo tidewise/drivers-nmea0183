@@ -429,3 +429,114 @@ TEST_F(AISTest, it_corrects_position_using_cog)
         ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
     ASSERT_EQ(position.time, corrected_position.time);
 }
+
+TEST_F(AISTest, it_converts_VesselInformation_into_a_message05)
+{
+    ais_base::VesselInformation info;
+    info.mmsi = 123456;
+    info.imo = 7890;
+    info.name = "Vingilot";
+    info.call_sign = "AAA";
+    info.ship_type = ais_base::ShipType::SHIP_TYPE_NOT_AVAILABLE;
+    info.epfd_fix = ais_base::EPFDFixType::EPFD_UNDEFINED;
+    info.reference_position = {5.0, 2.0, 0};
+    info.width = 14.0;
+    info.length = 40.0;
+    info.draft = 2.0;
+
+    auto message = AIS::getMessageFromVesselInformation(info);
+
+    ASSERT_EQ(message.get_mmsi(), utils::mmsi{123456});
+    ASSERT_EQ(message.get_imo_number(), 7890);
+    ASSERT_EQ(message.get_shipname(), "Vingilot");
+    ASSERT_EQ(message.get_callsign(), "AAA");
+    ASSERT_EQ(static_cast<int>(message.get_shiptype()), 0);
+    ASSERT_EQ(static_cast<int>(message.get_epfd_fix()), 0);
+    ASSERT_EQ(message.get_to_bow(), 15.0);
+    ASSERT_EQ(message.get_to_stern(), 25.0);
+    ASSERT_EQ(message.get_to_port(), 5.0);
+    ASSERT_EQ(message.get_to_starboard(), 9.0);
+    ASSERT_EQ(message.get_draught(), 20.0);
+}
+
+TEST_F(AISTest, it_converts_Position_into_a_message01)
+{
+    ais_base::Position position;
+    position.mmsi = 123456;
+    position.status = ais_base::NavigationalStatus::STATUS_UNDER_WAY_USING_ENGINE;
+    position.high_accuracy_position = true;
+    position.latitude = base::Angle::fromDeg(45);
+    position.longitude = base::Angle::fromDeg(-120);
+    position.course_over_ground = base::Angle::fromDeg(90);
+    position.yaw = base::Angle::fromDeg(45);
+    position.speed_over_ground = 5.0;
+    position.maneuver_indicator = ais_base::ManeuverIndicator::MANEUVER_NOT_AVAILABLE;
+    position.raim = true;
+    position.radio_status = 12345;
+
+    auto message = AIS::getMessageFromPosition(position);
+
+    ASSERT_EQ(message.get_mmsi(), utils::mmsi{123456});
+    ASSERT_EQ(static_cast<int>(message.get_nav_status()), 0);
+    ASSERT_TRUE(message.get_position_accuracy());
+
+    ASSERT_TRUE(message.get_latitude().has_value());
+    ASSERT_TRUE(message.get_longitude().has_value());
+    ASSERT_EQ(message.get_latitude().value().get(), 45);
+    ASSERT_EQ(message.get_longitude().value().get(), -120);
+
+    ASSERT_TRUE(message.get_cog().has_value());
+    ASSERT_EQ(message.get_cog().value(), 90);
+
+    ASSERT_TRUE(message.get_hdg().has_value());
+    ASSERT_EQ(message.get_hdg().value(), 45);
+
+    ASSERT_TRUE(message.get_sog().has_value());
+    ASSERT_NEAR(message.get_sog().value(), 9.7192, 1e-1);
+
+    ASSERT_EQ(static_cast<int>(message.get_maneuver_indicator()), 0);
+    ASSERT_TRUE(message.get_raim());
+    ASSERT_EQ(message.get_radio_status(), 12345);
+}
+
+TEST_F(AISTest,
+    it_handles_unset_values_in_VesselInformation_when_converting_into_message05)
+{
+    ais_base::VesselInformation info;
+
+    auto message = AIS::getMessageFromVesselInformation(info);
+
+    ASSERT_EQ(message.get_mmsi(), utils::mmsi{0});
+    ASSERT_EQ(message.get_imo_number(), 0);
+    ASSERT_EQ(message.get_shipname(), "");
+    ASSERT_EQ(message.get_callsign(), "");
+    ASSERT_EQ(static_cast<int>(message.get_shiptype()), 0);
+    ASSERT_EQ(static_cast<int>(message.get_epfd_fix()), 0);
+    ASSERT_EQ(message.get_to_bow(), 0);
+    ASSERT_EQ(message.get_to_stern(), 0);
+    ASSERT_EQ(message.get_to_port(), 0);
+    ASSERT_EQ(message.get_to_starboard(), 0);
+    ASSERT_EQ(message.get_draught(), 0.0);
+}
+
+TEST_F(AISTest, it_handles_unset_values_in_Position_when_converting_into_message01)
+{
+    ais_base::Position position;
+
+    auto message = AIS::getMessageFromPosition(position);
+
+    ASSERT_EQ(message.get_mmsi(), utils::mmsi{0});
+    ASSERT_EQ(static_cast<int>(message.get_nav_status()), 15);
+    ASSERT_FALSE(message.get_position_accuracy());
+
+    ASSERT_FALSE(message.get_latitude().has_value());
+    ASSERT_FALSE(message.get_longitude().has_value());
+
+    ASSERT_EQ(message.get_cog().value(), 0);
+    ASSERT_EQ(message.get_hdg().value(), 0);
+    ASSERT_EQ(message.get_sog().value(), 0);
+
+    ASSERT_EQ(static_cast<int>(message.get_maneuver_indicator()), 0);
+    ASSERT_FALSE(message.get_raim());
+    ASSERT_EQ(message.get_radio_status(), 0);
+}

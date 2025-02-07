@@ -88,6 +88,10 @@ namespace nmea0183 {
             marnav::ais::message_05 const& message);
         static ais_base::VoyageInformation getVoyageInformation(
             marnav::ais::message_05 const& message);
+        static marnav::ais::message_05 getMessageFromVesselInformation(
+            ais_base::VesselInformation const& info);
+        static marnav::ais::message_01 getMessageFromPosition(
+            ais_base::Position const& position);
     };
 }
 
