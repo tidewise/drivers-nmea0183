@@ -276,8 +276,8 @@ TEST_F(AISTest, it_selects_yaw_as_vessel_heading_source_if_available)
         position.course_over_ground,
         position.speed_over_ground);
 
-    ASSERT_NEAR(ori.z(), -0.7071068, 1e-3);
-    ASSERT_NEAR(ori.w(), 0.7071068, 1e-3);
+    ASSERT_TRUE(ori.isApprox(
+        Eigen::Quaterniond(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitZ()))));
     ASSERT_EQ(status,
         ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING);
 }
@@ -294,8 +294,8 @@ TEST_F(AISTest,
         position.course_over_ground,
         position.speed_over_ground);
 
-    ASSERT_NEAR(ori.z(), -0.7071068, 1e-3);
-    ASSERT_NEAR(ori.w(), 0.7071068, 1e-3);
+    ASSERT_TRUE(ori.isApprox(
+        Eigen::Quaterniond(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitZ()))));
     ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE);
 }
 
@@ -311,8 +311,8 @@ TEST_F(AISTest,
         position.course_over_ground,
         position.speed_over_ground);
 
-    ASSERT_EQ(ori.z(), 0);
-    ASSERT_EQ(ori.w(), 1);
+    ASSERT_TRUE(
+        ori.isApprox(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitZ()))));
     ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 
@@ -325,8 +325,8 @@ TEST_F(AISTest, it_selects_identity_as_vessel_heading_source_if_no_yaw_or_cog)
         position.course_over_ground,
         position.speed_over_ground);
 
-    ASSERT_EQ(ori.z(), 0);
-    ASSERT_EQ(ori.w(), 1);
+    ASSERT_TRUE(
+        ori.isApprox(Eigen::Quaterniond(Eigen::AngleAxisd(0, Eigen::Vector3d::UnitZ()))));
     ASSERT_EQ(status, ais_base::PositionCorrectionStatus::POSITION_RAW);
 }
 

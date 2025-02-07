@@ -10,10 +10,7 @@
 #include <marnav/ais/message_01.hpp>
 #include <marnav/ais/message_05.hpp>
 
-#include <base/samples/RigidBodyState.hpp>
-#include <gps_base/BaseTypes.hpp>
 #include <gps_base/UTMConverter.hpp>
-#include <optional>
 
 namespace nmea0183 {
     class AIS {

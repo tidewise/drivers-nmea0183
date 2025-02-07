@@ -171,15 +171,14 @@ base::Vector3d convertGPSToUTM(ais_base::Position const& position,
     return sensor2world.position;
 }
 
-base::Vector3d computeVesselPositionInWorldFrame(
-    base::Vector3d const& sensor2vessel_pos,
+base::Vector3d computeVesselPositionInWorldFrame(base::Vector3d const& sensor2vessel_pos,
     Eigen::Quaterniond const& vessel2world_ori,
     base::Vector3d const& sensor2world_pos)
 {
     const auto sensor2world_ori = vessel2world_ori;
-    base::samples::RigidBodyState vessel2world;
-    vessel2world.position = sensor2world_pos - (sensor2world_ori * sensor2vessel_pos);
-    return vessel2world.position;
+    base::Vector3d vessel2world_pos;
+    vessel2world_pos = sensor2world_pos - (sensor2world_ori * sensor2vessel_pos);
+    return vessel2world_pos;
 }
 
 std::pair<base::Angle, base::Angle> convertUTMToGPS(
@@ -199,11 +198,13 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor
     base::Vector3d const& sensor2vessel_pos,
     gps_base::UTMConverter const& utm_converter)
 {
+    auto vessel_pos = sensor_pos;
     if (std::isnan(sensor_pos.yaw.getRad()) &&
         std::isnan(sensor_pos.course_over_ground.getRad())) {
         LOG_DEBUG_S << "Position can't be corrected because both 'yaw' "
                        "and 'course_over_ground' values are missing."
                     << std::endl;
+        vessel_pos.correction_status = ais_base::PositionCorrectionStatus::POSITION_RAW;
         return sensor_pos;
     }
 
@@ -211,7 +212,6 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor
         sensor_pos.course_over_ground,
         sensor_pos.speed_over_ground);
 
-    auto vessel_pos = sensor_pos;
     if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
         LOG_DEBUG_S << "Position can't be corrected because 'yaw' value is missing and "
                        "'speed_over_ground' is below the threshold."
