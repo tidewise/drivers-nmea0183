@@ -10,10 +10,12 @@
 #include <marnav/ais/message_01.hpp>
 #include <marnav/ais/message_05.hpp>
 
+#include <gps_base/UTMConverter.hpp>
+
 namespace nmea0183 {
     class AIS {
-        uint32_t mDiscardedSentenceCount = 0;
-        Driver& mDriver;
+        uint32_t m_discarded_sentence_count = 0;
+        Driver& m_driver;
         std::vector<std::pair<std::string, std::uint32_t>> payloads;
 
     public:
@@ -43,6 +45,43 @@ namespace nmea0183 {
          * of some reordering/reassembly issues
          */
         uint32_t getDiscardedSentenceCount() const;
+
+        /**
+         * Applies position correction using the vessel reference position and the sensor
+         * offset
+         *
+         * @param position The vessel position to be corrected
+         * @param sensor2vessel_pos The position of the sensor relative to the
+         * vessel
+         * @param utm_converter The UTM converter
+         *
+         * @return The corrected vessel position with updated latitude, longitude, and
+         * correction status
+         */
+        static ais_base::Position applyPositionCorrection(
+            ais_base::Position const& position,
+            base::Vector3d const& sensor2vessel_pos,
+            gps_base::UTMConverter const& utm_converter);
+
+        /**
+         * @brief Selects the vessel's orientation in the world frame based on available
+         * heading or course information
+         * - Uses yaw if available
+         * - Uses course over ground if yaw is not available and the speed over ground is
+         * above the minimum threshold
+         * - Uses Identity otherwise
+         *
+         * @param yaw The vessel's yaw (heading) angle
+         * @param course_over_ground The vessel's course over ground angle
+         * @param speed_over_ground The vessel's speed over ground
+         *
+         * @return A pair containing the vessel's orientation and the position correction
+         * status
+         */
+        static std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus>
+        selectVesselHeadingSource(base::Angle const& yaw,
+            base::Angle const& course_over_ground,
+            double speed_over_ground);
 
         static ais_base::Position getPosition(marnav::ais::message_01 const& message);
         static ais_base::VesselInformation getVesselInformation(

@@ -1,3 +1,4 @@
+#include <base-logging/Logging.hpp>
 #include <marnav/ais/ais.hpp>
 #include <marnav/nmea/vdm.hpp>
 #include <nmea0183/AIS.hpp>
@@ -8,16 +9,17 @@ using namespace marnav;
 using namespace nmea0183;
 
 double constexpr KNOTS_TO_MS = 0.514444;
+double constexpr MIN_SPEED_FOR_VALID_COURSE = 0.2;
 
 AIS::AIS(Driver& driver)
-    : mDriver(driver)
+    : m_driver(driver)
 {
 }
 
 unique_ptr<ais::message> AIS::readMessage()
 {
     while (true) {
-        auto sentence = mDriver.readSentence();
+        auto sentence = m_driver.readSentence();
         auto msg = processSentence(*sentence);
         if (msg) {
             return msg;
@@ -27,7 +29,7 @@ unique_ptr<ais::message> AIS::readMessage()
 
 uint32_t AIS::getDiscardedSentenceCount() const
 {
-    return mDiscardedSentenceCount;
+    return m_discarded_sentence_count;
 }
 
 unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence)
@@ -41,12 +43,12 @@ unique_ptr<ais::message> AIS::processSentence(nmea::sentence const& sentence)
     size_t n_fragments = vdm->get_n_fragments();
     size_t fragment = vdm->get_fragment();
     if (fragment != payloads.size() + 1) {
-        mDiscardedSentenceCount += payloads.size();
+        m_discarded_sentence_count += payloads.size();
         payloads.clear();
 
         // Go on if we're receiving the first fragment of a new message
         if (fragment != 1) {
-            mDiscardedSentenceCount++;
+            m_discarded_sentence_count++;
             return unique_ptr<ais::message>();
         }
     }
@@ -108,13 +110,18 @@ ais_base::VesselInformation AIS::getVesselInformation(ais::message_05 const& mes
     string call_sign = message.get_callsign();
     first_not_space = call_sign.find_last_not_of(" ");
     info.call_sign = call_sign.substr(0, first_not_space + 1);
-    info.length = message.get_to_bow() + message.get_to_stern();
-    info.width = message.get_to_port() + message.get_to_starboard();
+    auto distance_to_stern = message.get_to_stern();
+    auto distance_to_starboard = message.get_to_starboard();
+    float length = message.get_to_bow() + distance_to_stern;
+    float width = message.get_to_port() + distance_to_starboard;
+    info.length = length;
+    info.width = width;
     info.draft = static_cast<float>(message.get_draught()) / 10;
     info.ship_type = static_cast<ais_base::ShipType>(message.get_shiptype());
     info.epfd_fix = static_cast<ais_base::EPFDFixType>(message.get_epfd_fix());
-    info.reference_position =
-        Eigen::Vector3d(message.get_to_stern(), message.get_to_starboard(), 0);
+    info.reference_position = Eigen::Vector3d(distance_to_stern - (length / 2.0),
+        distance_to_starboard - (width / 2.0),
+        0);
 
     info.ensureEnumsValid();
     return info;
@@ -128,4 +135,102 @@ ais_base::VoyageInformation AIS::getVoyageInformation(ais::message_05 const& mes
     info.imo = message.get_imo_number();
     info.destination = message.get_destination();
     return info;
+}
+
+std::pair<Eigen::Quaterniond, ais_base::PositionCorrectionStatus> AIS::
+    selectVesselHeadingSource(base::Angle const& yaw,
+        base::Angle const& course_over_ground,
+        double speed_over_ground)
+{
+    if (!std::isnan(yaw.getRad())) {
+        return {
+            Eigen::Quaterniond(Eigen::AngleAxisd(yaw.getRad(), Eigen::Vector3d::UnitZ())),
+            ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_HEADING};
+    }
+    else if (!std::isnan(course_over_ground.getRad()) &&
+             speed_over_ground >= MIN_SPEED_FOR_VALID_COURSE) {
+        return {Eigen::Quaterniond(Eigen::AngleAxisd(course_over_ground.getRad(),
+                    Eigen::Vector3d::UnitZ())),
+            ais_base::PositionCorrectionStatus::POSITION_CENTERED_USING_COURSE};
+    }
+    else {
+        return {Eigen::Quaterniond::Identity(),
+            ais_base::PositionCorrectionStatus::POSITION_RAW};
+    }
+}
+
+base::Vector3d convertGPSToUTM(ais_base::Position const& position,
+    gps_base::UTMConverter const& utm_converter)
+{
+    gps_base::Solution sensor2world_solution;
+    sensor2world_solution.latitude = position.latitude.getDeg();
+    sensor2world_solution.longitude = position.longitude.getDeg();
+
+    auto sensor2world = utm_converter.convertToUTM(sensor2world_solution);
+
+    return sensor2world.position;
+}
+
+base::Vector3d computeVesselPositionInWorldFrame(base::Vector3d const& sensor2vessel_pos,
+    Eigen::Quaterniond const& vessel2world_ori,
+    base::Vector3d const& sensor2world_pos)
+{
+    const auto sensor2world_ori = vessel2world_ori;
+    base::Vector3d vessel2world_pos;
+    vessel2world_pos = sensor2world_pos - (sensor2world_ori * sensor2vessel_pos);
+    return vessel2world_pos;
+}
+
+std::pair<base::Angle, base::Angle> convertUTMToGPS(
+    base::Vector3d const& vessel2world_pos,
+    gps_base::UTMConverter const& utm_converter)
+{
+    base::samples::RigidBodyState vessel2world;
+    vessel2world.position = vessel2world_pos;
+    gps_base::Solution vessel2world_gps;
+    vessel2world_gps = utm_converter.convertUTMToGPS(vessel2world);
+
+    return {base::Angle::fromDeg(vessel2world_gps.latitude),
+        base::Angle::fromDeg(vessel2world_gps.longitude)};
+}
+
+ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor_pos,
+    base::Vector3d const& sensor2vessel_pos,
+    gps_base::UTMConverter const& utm_converter)
+{
+    auto vessel_pos = sensor_pos;
+    if (std::isnan(sensor_pos.yaw.getRad()) &&
+        std::isnan(sensor_pos.course_over_ground.getRad())) {
+        LOG_DEBUG_S << "Position can't be corrected because both 'yaw' "
+                       "and 'course_over_ground' values are missing."
+                    << std::endl;
+        vessel_pos.correction_status = ais_base::PositionCorrectionStatus::POSITION_RAW;
+        return sensor_pos;
+    }
+
+    auto [vessel2world_ori, status] = selectVesselHeadingSource(sensor_pos.yaw,
+        sensor_pos.course_over_ground,
+        sensor_pos.speed_over_ground);
+
+    if (status == ais_base::PositionCorrectionStatus::POSITION_RAW) {
+        LOG_DEBUG_S << "Position can't be corrected because 'yaw' value is missing and "
+                       "'speed_over_ground' is below the threshold."
+                    << std::endl;
+        vessel_pos.correction_status = status;
+        return vessel_pos;
+    }
+
+    auto sensor2world_pos = convertGPSToUTM(sensor_pos, utm_converter);
+
+    auto vessel2world_pos = computeVesselPositionInWorldFrame(sensor2vessel_pos,
+        vessel2world_ori,
+        sensor2world_pos);
+
+    auto [latitude, longitude] = convertUTMToGPS(vessel2world_pos, utm_converter);
+
+    vessel_pos.latitude = latitude;
+    vessel_pos.longitude = longitude;
+    vessel_pos.correction_status = status;
+
+    return vessel_pos;
 }
