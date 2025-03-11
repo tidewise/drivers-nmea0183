@@ -243,7 +243,7 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor
 template <typename SourceType>
 SourceType safe_value(SourceType value, SourceType default_value)
 {
-    return (value == base::unknown<SourceType>()) ? default_value : value;
+    return (base::isUnknown(value)) ? default_value : value;
 }
 
 /**
@@ -253,7 +253,7 @@ SourceType safe_value(SourceType value, SourceType default_value)
 template <typename SourceType, typename TargetType = SourceType>
 utils::optional<TargetType> safe_optional(SourceType value)
 {
-    return (value == base::unknown<SourceType>())
+    return (base::isUnknown(value))
                ? utils::optional<TargetType>{}
                : utils::optional<TargetType>{static_cast<TargetType>(value)};
 }
@@ -269,10 +269,10 @@ std::pair<marnav::utils::optional<marnav::geo::latitude>,
     marnav::utils::optional<marnav::geo::longitude>>
 safe_optional_gps_position(base::Angle latitude, base::Angle longitude)
 {
-    return {std::isnan(latitude.getRad())
+    return {base::isUnknown(latitude)
                 ? marnav::utils::optional<marnav::geo::latitude>{}
                 : marnav::utils::optional<marnav::geo::latitude>{latitude.getDeg()},
-        std::isnan(longitude.getRad())
+        base::isUnknown(longitude)
             ? marnav::utils::optional<marnav::geo::longitude>{}
             : marnav::utils::optional<marnav::geo::longitude>{longitude.getDeg()}};
 }
