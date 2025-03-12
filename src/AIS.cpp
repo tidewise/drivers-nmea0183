@@ -9,6 +9,7 @@ using namespace marnav;
 using namespace nmea0183;
 
 double constexpr KNOTS_TO_MS = 0.514444;
+double constexpr MS_TO_KNOTS = 1.94384;
 double constexpr MIN_SPEED_FOR_VALID_COURSE = 0.2;
 
 AIS::AIS(Driver& driver)
@@ -233,4 +234,89 @@ ais_base::Position AIS::applyPositionCorrection(ais_base::Position const& sensor
     vessel_pos.correction_status = status;
 
     return vessel_pos;
+}
+
+/**
+ * @brief General template for handling values that might be unknown, returning a default
+ * value.
+ */
+template <typename SourceType>
+SourceType safe_value(SourceType value, SourceType default_value)
+{
+    return (base::isUnknown(value)) ? default_value : value;
+}
+
+/**
+ * @brief General template for handling optional values that might be unknown.
+ * It also deals with type casting.
+ */
+template <typename SourceType, typename TargetType = SourceType>
+utils::optional<TargetType> safe_optional(SourceType value)
+{
+    return (base::isUnknown(value))
+               ? utils::optional<TargetType>{}
+               : utils::optional<TargetType>{static_cast<TargetType>(value)};
+}
+
+/**
+ * @brief Method for dealing with latitude and longitude values in base::Angle that might
+ * be unknown by returning default values and converting them to the marnav type.
+ * If given values exist, they are converted to marnav type
+ *
+ * @return A pair [marnav::geo::latitude, marnav::geo::longitude]
+ */
+std::pair<marnav::utils::optional<marnav::geo::latitude>,
+    marnav::utils::optional<marnav::geo::longitude>>
+safe_optional_gps_position(base::Angle latitude, base::Angle longitude)
+{
+    return {base::isUnknown(latitude)
+                ? marnav::utils::optional<marnav::geo::latitude>{}
+                : marnav::utils::optional<marnav::geo::latitude>{latitude.getDeg()},
+        base::isUnknown(longitude)
+            ? marnav::utils::optional<marnav::geo::longitude>{}
+            : marnav::utils::optional<marnav::geo::longitude>{longitude.getDeg()}};
+}
+
+ais::message_05 AIS::getMessageFromVesselInformation(
+    ais_base::VesselInformation const& info)
+{
+    ais::message_05 message;
+
+    message.set_mmsi(utils::mmsi{static_cast<unsigned int>(info.mmsi)});
+    message.set_imo_number(info.imo);
+    message.set_shipname(info.name);
+    message.set_callsign(info.call_sign);
+    message.set_shiptype(static_cast<marnav::ais::ship_type>(info.ship_type));
+    message.set_epfd_fix(static_cast<marnav::ais::epfd_fix_type>(info.epfd_fix));
+    message.set_to_bow(safe_value((info.length / 2.0) - info.reference_position.x(), 0.));
+    message.set_to_stern(
+        safe_value(info.reference_position.x() + (info.length / 2.0), 0.));
+    message.set_to_starboard(
+        safe_value(info.reference_position.y() + (info.width / 2.0), 0.));
+    message.set_to_port(safe_value((info.width / 2.0) - info.reference_position.y(), 0.));
+    message.set_draught(safe_value(info.draft * 10.0, 0.));
+
+    return message;
+}
+
+ais::message_01 AIS::getMessageFromPosition(ais_base::Position const& position)
+{
+    ais::message_01 message;
+
+    message.set_mmsi(utils::mmsi{static_cast<unsigned int>(position.mmsi)});
+    message.set_nav_status(static_cast<marnav::ais::navigation_status>(position.status));
+    message.set_position_accuracy(position.high_accuracy_position);
+    auto [safe_latitude, safe_longitude] =
+        safe_optional_gps_position(position.latitude, position.longitude);
+    message.set_latitude(safe_latitude);
+    message.set_longitude(safe_longitude);
+    message.set_cog(safe_optional(position.course_over_ground.getDeg()));
+    message.set_hdg(safe_optional<double, uint32_t>(position.yaw.getDeg()));
+    message.set_sog(safe_optional(position.speed_over_ground * MS_TO_KNOTS));
+    message.set_maneuver_indicator(
+        static_cast<marnav::ais::maneuver_indicator_id>(position.maneuver_indicator));
+    message.set_raim(position.raim);
+    message.set_radio_status(position.radio_status);
+
+    return message;
 }
